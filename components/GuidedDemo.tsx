@@ -128,6 +128,7 @@ function SentinelAvatar({ speaking }: { speaking: boolean }) {
 export function GuidedDemo() {
   const active = useConsole((s) => s.guidedActive);
   const setActive = useConsole((s) => s.setGuidedActive);
+  const reduce = useReducedMotion();
 
   const [caption, setCaption] = useState("");
   const [captionIndex, setCaptionIndex] = useState(0);
@@ -222,7 +223,12 @@ export function GuidedDemo() {
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="pointer-events-auto relative flex items-start gap-3.5 rounded-2xl border border-indigo/40 bg-ink-700/90 px-4 py-4 shadow-[0_24px_70px_-18px_rgba(108,92,231,0.55)] backdrop-blur-2xl">
+            {/* Gentle contained hover — alive and floating, never darting */}
+            <motion.div
+              animate={reduce ? {} : { x: [0, 6, 0, -6, 0], y: [0, -10, 0, 7, 0] }}
+              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+              className="pointer-events-auto relative flex items-start gap-3.5 rounded-2xl border border-indigo/40 bg-ink-700/90 px-4 py-4 shadow-[0_24px_70px_-18px_rgba(108,92,231,0.55)] backdrop-blur-2xl"
+            >
               <div className="pointer-events-none absolute -left-6 -top-6 h-24 w-24 rounded-full bg-indigo/25 blur-3xl" />
 
               <SentinelAvatar speaking={speaking} />
@@ -256,7 +262,7 @@ export function GuidedDemo() {
                   )}
                 </p>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         </>
       )}
