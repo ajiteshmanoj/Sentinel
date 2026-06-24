@@ -55,10 +55,15 @@ const config: Config = {
           "0%": { transform: "scale(0.8)", opacity: "0.6" },
           "100%": { transform: "scale(2.2)", opacity: "0" },
         },
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
+        },
       },
       animation: {
         shimmer: "shimmer 1.6s cubic-bezier(0.22,1,0.36,1) infinite",
         "pulse-ring": "pulse-ring 1.8s ease-out infinite",
+        marquee: "marquee 32s linear infinite",
       },
     },
   },

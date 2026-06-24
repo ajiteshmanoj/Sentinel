@@ -2,37 +2,22 @@
 
 import { motion } from "framer-motion";
 import { AmbientBackground } from "./AmbientBackground";
+import { GlyphField } from "./GlyphField";
 import { GuidedDemoButton } from "./GuidedDemo";
-import { Logo } from "./Logo";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function Hero() {
   return (
-    <section className="relative flex min-h-[100svh] flex-col overflow-hidden">
+    <section
+      id="top"
+      className="relative flex min-h-[100svh] flex-col overflow-hidden"
+    >
       <AmbientBackground />
-
-      {/* Top navigation */}
-      <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-6">
-        <Logo />
-        <nav className="hidden items-center gap-8 text-sm text-white/60 lg:flex">
-          <a href="#console" className="transition-colors hover:text-white">
-            Live console
-          </a>
-          <a href="#how" className="transition-colors hover:text-white">
-            How it works
-          </a>
-          <a href="#positioning" className="transition-colors hover:text-white">
-            Why fintech first
-          </a>
-        </nav>
-        <a href="#console" className="btn-ghost hidden sm:inline-flex">
-          See it live
-        </a>
-      </header>
+      <GlyphField />
 
       {/* Hero content — vertically centered so whitespace is balanced */}
-      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-6 pb-16 pt-8 text-center">
+      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-6 pb-16 pt-24 text-center">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
