@@ -9,7 +9,7 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function Hero() {
   return (
-    <section className="relative min-h-[100svh] overflow-hidden">
+    <section className="relative flex min-h-[100svh] flex-col overflow-hidden">
       <AmbientBackground />
 
       {/* Top navigation */}
@@ -31,8 +31,8 @@ export function Hero() {
         </a>
       </header>
 
-      {/* Hero content */}
-      <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-6 pb-28 pt-20 text-center md:pt-28">
+      {/* Hero content — vertically centered so whitespace is balanced */}
+      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-6 pb-16 pt-8 text-center">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
