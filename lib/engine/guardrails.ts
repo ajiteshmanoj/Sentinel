@@ -5,8 +5,12 @@
 // These are the regulator-proof clear cases; the model only sees the grey zone.
 // ────────────────────────────────────────────────────────────────────────────
 
-import { GUARDRAILS } from "./config";
-import type { AgentAction, GuardrailHit } from "./types";
+import { DEFAULT_THRESHOLDS, GUARDRAILS } from "./config";
+import type {
+  AgentAction,
+  GuardrailHit,
+  GuardrailThresholds,
+} from "./types";
 
 const money = (n: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", {
@@ -19,7 +23,11 @@ const money = (n: number, currency = "USD") =>
  * Evaluate all deterministic guardrails against an action.
  * Returns every rule that fired (may be empty). Order is stable for audit.
  */
-export function evaluateGuardrails(action: AgentAction): GuardrailHit[] {
+export function evaluateGuardrails(
+  action: AgentAction,
+  overrides?: Partial<GuardrailThresholds>,
+): GuardrailHit[] {
+  const t: GuardrailThresholds = { ...DEFAULT_THRESHOLDS, ...overrides };
   const hits: GuardrailHit[] = [];
   const p = action.payload;
   const value = typeof p.monetaryValue === "number" ? p.monetaryValue : 0;
@@ -33,7 +41,7 @@ export function evaluateGuardrails(action: AgentAction): GuardrailHit[] {
 
   // New payee + money movement.
   if (
-    value > GUARDRAILS.NEW_ACCOUNT_VALUE &&
+    value > t.newAccountValue &&
     accountAge !== undefined &&
     accountAge <= GUARDRAILS.NEW_ACCOUNT_DAYS
   ) {
@@ -41,7 +49,7 @@ export function evaluateGuardrails(action: AgentAction): GuardrailHit[] {
       ruleName: "New-payee transfer limit",
       verdict: "block",
       detail: `${money(value, currency)} to an account added ${accountAge} day(s) ago (limit: ${money(
-        GUARDRAILS.NEW_ACCOUNT_VALUE,
+        t.newAccountValue,
         currency,
       )} within ${GUARDRAILS.NEW_ACCOUNT_DAYS} days).`,
     });
@@ -49,14 +57,14 @@ export function evaluateGuardrails(action: AgentAction): GuardrailHit[] {
 
   // Maker-checker for large single payments.
   if (
-    value > GUARDRAILS.MAKER_CHECKER_VALUE &&
+    value > t.makerCheckerValue &&
     (action.domain === "payments" || action.domain === "treasury")
   ) {
     hits.push({
       ruleName: "Maker-checker threshold",
       verdict: "review",
       detail: `Single payment of ${money(value, currency)} exceeds the ${money(
-        GUARDRAILS.MAKER_CHECKER_VALUE,
+        t.makerCheckerValue,
         currency,
       )} maker-checker limit.`,
     });
@@ -81,12 +89,12 @@ export function evaluateGuardrails(action: AgentAction): GuardrailHit[] {
   }
 
   // Refunds above the review threshold.
-  if (action.domain === "refunds" && value > GUARDRAILS.REFUND_REVIEW_VALUE) {
+  if (action.domain === "refunds" && value > t.refundReviewValue) {
     hits.push({
       ruleName: "Refund approval limit",
       verdict: "review",
       detail: `Refund of ${money(value, currency)} exceeds the ${money(
-        GUARDRAILS.REFUND_REVIEW_VALUE,
+        t.refundReviewValue,
         currency,
       )} approval limit.`,
     });
@@ -95,14 +103,14 @@ export function evaluateGuardrails(action: AgentAction): GuardrailHit[] {
   // Irreversible + high value.
   if (
     action.reversible === false &&
-    value > GUARDRAILS.IRREVERSIBLE_VALUE &&
+    value > t.irreversibleValue &&
     !hits.some((h) => h.ruleName === "New-payee transfer limit")
   ) {
     hits.push({
       ruleName: "Irreversible high-value action",
       verdict: "review",
       detail: `Irreversible action moving ${money(value, currency)} (over ${money(
-        GUARDRAILS.IRREVERSIBLE_VALUE,
+        t.irreversibleValue,
         currency,
       )}).`,
     });

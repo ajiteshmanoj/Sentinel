@@ -39,6 +39,8 @@ export interface AgentAction {
   };
   /** Whether the action can be undone after execution. */
   reversible: boolean;
+  /** Marks the centerpiece "money moment" actions for extra demo drama. */
+  headline?: boolean;
 }
 
 /** An organisation policy rule, editable in the UI. */
@@ -46,6 +48,18 @@ export interface PolicyRule {
   id: string;
   text: string;
   enabled: boolean;
+}
+
+/**
+ * Editable deterministic-guardrail thresholds. Surfaced in the UI so an operator
+ * can change a limit live and re-run — proving the engine reads the policy, not a
+ * script. Any omitted field falls back to the locked config default.
+ */
+export interface GuardrailThresholds {
+  newAccountValue: number;
+  makerCheckerValue: number;
+  refundReviewValue: number;
+  irreversibleValue: number;
 }
 
 /** A deterministic guardrail hit (Layer 1). */
@@ -103,4 +117,6 @@ export interface JudgeResult {
 export interface JudgeRequestBody {
   action: AgentAction;
   policyRules: PolicyRule[];
+  /** Optional live overrides for the deterministic guardrail thresholds. */
+  thresholds?: Partial<GuardrailThresholds>;
 }

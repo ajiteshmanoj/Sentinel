@@ -3,7 +3,12 @@
 import { motion, useReducedMotion } from "framer-motion";
 import type { FeedItem } from "@/lib/store";
 import type { AgentAction } from "@/lib/engine/types";
-import { DOMAIN_LABEL, VERDICT_THEME, capitalizeFirst, formatMoney } from "@/lib/format";
+import {
+  DOMAIN_LABEL,
+  VERDICT_THEME,
+  capitalizeFirst,
+  formatMoney,
+} from "@/lib/format";
 import { CheckIcon, DomainIcon, LockIcon } from "./icons";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -63,41 +68,99 @@ function PayloadFacts({ action }: { action: AgentAction }) {
   );
 }
 
+/** Short, concrete facts strip for the dramatic catch banner. */
+function catchFacts(action: AgentAction): string {
+  const p = action.payload;
+  const parts: string[] = [];
+  if (typeof p.monetaryValue === "number")
+    parts.push(formatMoney(p.monetaryValue, (p.currency as string) ?? "USD"));
+  if (!action.reversible) parts.push("irreversible");
+  if (typeof p.recipientAccountAgeDays === "number" && p.recipientAccountAgeDays <= 30)
+    parts.push(`account opened ${p.recipientAccountAgeDays} days ago`);
+  if (typeof p.affectedCount === "number" && p.affectedCount > 1000)
+    parts.push(`${p.affectedCount.toLocaleString()} customers`);
+  return parts.join(" · ");
+}
+
+/** What the agent is "doing" while being assessed (raises the stakes). */
+function executingLabel(action: AgentAction): string {
+  const p = action.payload;
+  const amount =
+    typeof p.monetaryValue === "number"
+      ? formatMoney(p.monetaryValue, (p.currency as string) ?? "USD")
+      : null;
+  const to = typeof p.recipient === "string" ? p.recipient : null;
+  if (amount && to) return `Authorizing ${amount} → ${to}`;
+  if (amount) return `Authorizing ${amount}`;
+  if (action.domain === "data") return "Preparing data export…";
+  if (action.domain === "marketing") return "Queueing send…";
+  return "Executing action…";
+}
+
 export function ActionCard({
   item,
   index,
   paused = false,
+  dimmed = false,
   onOpenReview,
 }: {
   item: FeedItem;
   index: number;
   paused?: boolean;
+  dimmed?: boolean;
   onOpenReview: (id: string) => void;
 }) {
   const reduce = useReducedMotion();
-  const { action, status, result, humanDecision } = item;
+  const { action, status, result, offOutcome, humanDecision } = item;
   const verdict = result?.verdict;
   const theme = verdict ? VERDICT_THEME[verdict] : null;
 
   const assessing = status === "assessing";
-  // While paused, freeze the in-flight "assessing" animation too.
   const beamActive = assessing && !paused;
   const blocked = verdict === "block";
+  const executed = status === "executed";
+  const offDanger = executed && offOutcome?.dangerous;
 
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 18, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
+      animate={{
+        opacity: dimmed ? 0.35 : 1,
+        y: 0,
+        scale: blocked && !dimmed && !reduce ? 1.01 : dimmed ? 0.99 : 1,
+        filter: dimmed ? "saturate(0.5)" : "saturate(1)",
+      }}
       transition={{ duration: 0.5, ease: EASE }}
       className={`surface relative overflow-hidden p-5 transition-shadow duration-500 ${
-        theme ? `${theme.border} ${theme.glow}` : "border-white/[0.07]"
-      } ${blocked ? "border-sentinel-red/60" : ""}`}
+        blocked
+          ? "border-sentinel-red/70 shadow-glow-red"
+          : offDanger
+            ? "border-sentinel-red/50"
+            : theme
+              ? `${theme.border} ${theme.glow}`
+              : "border-white/[0.07]"
+      }`}
     >
+      {/* Executing progress bar (Sentinel ON, assessing) */}
+      {assessing && (
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-0.5 bg-white/[0.06]">
+          <motion.div
+            className="h-full bg-gradient-to-r from-indigo-soft to-indigo"
+            initial={{ width: "6%" }}
+            animate={beamActive ? { width: "94%" } : {}}
+            transition={{
+              duration: beamActive ? 1.5 : 0,
+              ease: "easeInOut",
+            }}
+          />
+        </div>
+      )}
+
       {/* Assessing scan beam — frozen while paused */}
       {assessing && !reduce && (
         <motion.div
-          className="pointer-events-none absolute inset-0 z-10"
+          className="pointer-events-none absolute inset-0 z-[5]"
           aria-hidden
         >
           <motion.div
@@ -114,30 +177,81 @@ export function ActionCard({
                 : { duration: 0 }
             }
           />
-          <div className="absolute inset-0 border-y border-indigo-soft/20" />
         </motion.div>
       )}
 
-      {/* Block flare */}
+      {/* Block flare — the catch */}
       {blocked && !reduce && (
         <motion.div
           aria-hidden
-          className="pointer-events-none absolute inset-0"
+          className="pointer-events-none absolute inset-0 z-[6]"
           initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 0.9, 0] }}
+          animate={{ opacity: [0, 1, 0] }}
           transition={{ duration: 0.7, ease: "easeOut" }}
           style={{
             background:
-              "linear-gradient(90deg, transparent, rgba(255,59,92,0.35), transparent)",
+              "linear-gradient(90deg, transparent, rgba(255,59,92,0.45), transparent)",
           }}
         />
       )}
 
-      <div className="relative flex items-start gap-4">
+      {/* FROZEN banner — the money moment */}
+      {blocked && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE }}
+          className="relative z-10 mb-4 flex items-center gap-3 rounded-xl border border-sentinel-red/50 bg-sentinel-red/[0.12] px-4 py-3"
+        >
+          <motion.span
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-sentinel-red/20 text-sentinel-red"
+            animate={reduce ? {} : { scale: [1, 1.18, 1] }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          >
+            <LockIcon className="h-4 w-4" />
+          </motion.span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-sentinel-red">
+              Sentinel froze this {action.headline ? "wire" : "action"}
+            </p>
+            <p className="truncate text-xs text-white/70">{catchFacts(action)}</p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* OFF-mode "money gone" banner */}
+      {offDanger && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE }}
+          className="relative z-10 mb-4 flex items-center gap-3 rounded-xl border border-sentinel-red/40 bg-sentinel-red/[0.08] px-4 py-3"
+        >
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-sentinel-red/15 text-sentinel-red">
+            !
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white">
+              {offOutcome?.label}
+            </p>
+            <p className="truncate text-xs text-sentinel-red/90">
+              Sentinel would have{" "}
+              {offOutcome?.wouldHaveBeen === "block" ? "blocked" : "held"} this —
+              but it was switched off.
+            </p>
+          </div>
+        </motion.div>
+      )}
+
+      <div className="relative z-[7] flex items-start gap-4">
         {/* Domain icon */}
         <div
           className={`mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-xl border ${
-            theme ? `${theme.border} ${theme.bg} ${theme.text}` : "border-white/10 bg-white/[0.03] text-indigo-soft"
+            blocked || offDanger
+              ? "border-sentinel-red/50 bg-sentinel-red/10 text-sentinel-red"
+              : theme
+                ? `${theme.border} ${theme.bg} ${theme.text}`
+                : "border-white/10 bg-white/[0.03] text-indigo-soft"
           }`}
         >
           <span className="h-5 w-5">
@@ -172,11 +286,22 @@ export function ActionCard({
                       paused ? "" : "animate-pulse"
                     }`}
                   />
-                  {paused ? "Paused" : "Assessing…"}
+                  {paused ? "Paused" : "Executing…"}
                 </span>
               )}
               {status === "queued" && (
                 <span className="text-xs text-white/30">queued</span>
+              )}
+              {executed && (
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
+                    offDanger
+                      ? "border-sentinel-red/50 bg-sentinel-red/10 text-sentinel-red"
+                      : "border-white/15 bg-white/[0.05] text-white/60"
+                  }`}
+                >
+                  {offDanger ? "Money gone" : "Executed"}
+                </span>
               )}
               {theme && (
                 <span
@@ -193,11 +318,18 @@ export function ActionCard({
             </div>
           </div>
 
+          {/* Executing label while assessing */}
+          {assessing && (
+            <p className="mt-3 font-mono text-xs text-indigo-soft/80">
+              {paused ? "Paused mid-flight — Sentinel is holding execution." : `${executingLabel(action)}…`}
+            </p>
+          )}
+
           <div className="mt-4">
             <PayloadFacts action={action} />
           </div>
 
-          {/* Resolved detail */}
+          {/* Resolved detail (Sentinel ON) */}
           {result && (
             <div className="mt-4 space-y-3">
               {result.caughtBy && (
@@ -246,7 +378,11 @@ export function ActionCard({
                   ) : (
                     <button
                       onClick={() => onOpenReview(action.id)}
-                      className="btn-ghost h-8 px-3 py-0 text-xs"
+                      className={`btn h-8 px-3 py-0 text-xs ${
+                        blocked
+                          ? "border border-sentinel-red/50 bg-sentinel-red/10 text-sentinel-red hover:bg-sentinel-red/20"
+                          : "btn-ghost"
+                      }`}
                     >
                       Open in review panel →
                     </button>

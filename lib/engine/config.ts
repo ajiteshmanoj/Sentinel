@@ -31,6 +31,8 @@ export const MIN_CONFIDENCE = 0.6;
 /** Server-side request timeout for the model call (ms). */
 export const MODEL_TIMEOUT_MS = 30_000;
 
+import type { GuardrailThresholds } from "./types";
+
 /** Deterministic guardrail tuning (mirrors the default policy rules). */
 export const GUARDRAILS = {
   /** New-payee window in days. */
@@ -46,3 +48,11 @@ export const GUARDRAILS = {
   /** Affecting more than this many customers => review. */
   BLAST_RADIUS_COUNT: 1_000,
 } as const;
+
+/** The editable subset of thresholds, with their defaults. */
+export const DEFAULT_THRESHOLDS: GuardrailThresholds = {
+  newAccountValue: GUARDRAILS.NEW_ACCOUNT_VALUE,
+  makerCheckerValue: GUARDRAILS.MAKER_CHECKER_VALUE,
+  refundReviewValue: GUARDRAILS.REFUND_REVIEW_VALUE,
+  irreversibleValue: GUARDRAILS.IRREVERSIBLE_VALUE,
+};

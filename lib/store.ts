@@ -1,23 +1,47 @@
 // ────────────────────────────────────────────────────────────────────────────
 // Client-side console store. Drives the scripted feed, calls the LIVE engine
 // (/api/judge) for each action, holds verdicts, human decisions, and stats.
+//
+// Two run modes:
+//  - Sentinel ON  → every action is judged live by the engine.
+//  - Sentinel OFF → the counterfactual: actions just execute. Dangerous ones
+//    (computed from the SAME deterministic rules) slip through — money gone.
 // ────────────────────────────────────────────────────────────────────────────
 
 import { create } from "zustand";
+import { DEFAULT_THRESHOLDS } from "./engine/config";
+import { evaluateGuardrails, worstGuardrailVerdict } from "./engine/guardrails";
 import { DEFAULT_POLICY_RULES } from "./policy";
 import { SCENARIO } from "./scenarios";
-import type { AgentAction, JudgeResult, PolicyRule } from "./engine/types";
+import type {
+  AgentAction,
+  GuardrailThresholds,
+  JudgeResult,
+  PolicyRule,
+} from "./engine/types";
 
-export type ItemStatus = "queued" | "assessing" | "resolved" | "error";
+export type ItemStatus =
+  | "queued"
+  | "assessing"
+  | "resolved"
+  | "error"
+  | "executed"; // Sentinel-OFF outcome
 export type HumanDecision = "approved" | "edited" | "blocked" | null;
+
+/** What happens to an action when Sentinel is OFF. */
+export interface OffOutcome {
+  dangerous: boolean;
+  /** What Sentinel WOULD have done, for the "you needed this" callout. */
+  wouldHaveBeen: "review" | "block" | null;
+  label: string;
+}
 
 export interface FeedItem {
   action: AgentAction;
   status: ItemStatus;
   result: JudgeResult | null;
-  /** The reviewer's decision once they act on an escalated card. */
+  offOutcome: OffOutcome | null;
   humanDecision: HumanDecision;
-  /** True while this card is open in the human review panel. */
   inReview: boolean;
 }
 
@@ -26,12 +50,13 @@ export type RunState = "idle" | "running" | "paused" | "done";
 interface ConsoleState {
   items: FeedItem[];
   policyRules: PolicyRule[];
+  thresholds: GuardrailThresholds;
+  sentinelEnabled: boolean;
   runState: RunState;
-  /** ms between actions; lower = faster. */
   speedMs: number;
-  /** id of the card currently expanded in the review panel, if any. */
   activeReviewId: string | null;
-  /** monotonically-increasing run token to cancel stale runs. */
+  /** id of the card currently spotlighted by a dramatic catch (dims siblings). */
+  spotlightId: string | null;
   runToken: number;
 
   // actions
@@ -39,6 +64,7 @@ interface ConsoleState {
   pause: () => void;
   reset: () => void;
   setSpeed: (ms: number) => void;
+  setSentinelEnabled: (on: boolean) => void;
   openReview: (id: string) => void;
   closeReview: () => void;
   decide: (id: string, decision: Exclude<HumanDecision, null>) => void;
@@ -46,6 +72,7 @@ interface ConsoleState {
   togglePolicyRule: (id: string) => void;
   addPolicyRule: () => void;
   removePolicyRule: (id: string) => void;
+  setThreshold: (key: keyof GuardrailThresholds, value: number) => void;
   resetPolicy: () => void;
 }
 
@@ -54,49 +81,69 @@ const freshItems = (): FeedItem[] =>
     action,
     status: "queued",
     result: null,
+    offOutcome: null,
     humanDecision: null,
     inReview: false,
   }));
 
 function delay(ms: number, token: number, getToken: () => number) {
   return new Promise<void>((resolve, reject) => {
-    const t = setTimeout(() => {
+    setTimeout(() => {
       if (getToken() !== token) reject(new Error("cancelled"));
       else resolve();
     }, ms);
-    // best-effort cleanup not required for the demo
-    void t;
   });
 }
 
 async function judgeAction(
   action: AgentAction,
   policyRules: PolicyRule[],
+  thresholds: GuardrailThresholds,
 ): Promise<JudgeResult> {
   const res = await fetch("/api/judge", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action, policyRules }),
+    body: JSON.stringify({ action, policyRules, thresholds }),
   });
-  if (!res.ok) {
-    throw new Error(`Engine returned ${res.status}`);
-  }
+  if (!res.ok) throw new Error(`Engine returned ${res.status}`);
   return (await res.json()) as JudgeResult;
+}
+
+/** Sentinel-OFF: compute the counterfactual outcome from the same rules. */
+function computeOffOutcome(
+  action: AgentAction,
+  thresholds: GuardrailThresholds,
+): OffOutcome {
+  const hits = evaluateGuardrails(action, thresholds);
+  const wouldHaveBeen = worstGuardrailVerdict(hits);
+  const dangerous = wouldHaveBeen !== null && !action.reversible;
+  const reallyDangerous = wouldHaveBeen !== null; // any escalation-worthy action
+  return {
+    dangerous: reallyDangerous,
+    wouldHaveBeen,
+    label: dangerous
+      ? "Executed · irreversible · money gone"
+      : reallyDangerous
+        ? "Executed without review"
+        : "Executed",
+  };
 }
 
 export const useConsole = create<ConsoleState>((set, get) => ({
   items: freshItems(),
   policyRules: DEFAULT_POLICY_RULES.map((r) => ({ ...r })),
+  thresholds: { ...DEFAULT_THRESHOLDS },
+  sentinelEnabled: true,
   runState: "idle",
   speedMs: 1100,
   activeReviewId: null,
+  spotlightId: null,
   runToken: 0,
 
   runScenario: async () => {
     const state = get();
     if (state.runState === "running") return;
 
-    // Fresh run if previous finished or was reset.
     const startFresh = state.runState === "idle" || state.runState === "done";
     const token = state.runToken + 1;
     set({
@@ -104,63 +151,99 @@ export const useConsole = create<ConsoleState>((set, get) => ({
       runState: "running",
       items: startFresh ? freshItems() : state.items,
       activeReviewId: startFresh ? null : state.activeReviewId,
+      spotlightId: null,
     });
 
     const isCancelled = () => get().runToken !== token;
 
     for (let i = 0; i < get().items.length; i++) {
       if (isCancelled()) return;
-      // Skip already-resolved items (resume case).
-      if (get().items[i].status === "resolved") continue;
+      const cur = get().items[i];
+      if (cur.status === "resolved" || cur.status === "executed") continue;
 
-      const action = get().items[i].action;
+      const action = cur.action;
+      const sentinelOn = get().sentinelEnabled;
 
-      // Mark assessing.
+      // Mark assessing / executing.
       set((s) => ({
         items: s.items.map((it, idx) =>
           idx === i ? { ...it, status: "assessing" } : it,
         ),
       }));
 
-      // Minimum dwell so the "Sentinel is assessing…" beam is visible even if
-      // the model is fast. Runs concurrently with the live call.
+      // Minimum dwell so the "assessing"/"executing" beat is visible.
       const dwell = delay(
-        Math.max(500, get().speedMs * 0.7),
+        Math.max(650, get().speedMs * 0.8),
         token,
         () => get().runToken,
       ).catch(() => undefined);
 
-      let result: JudgeResult | null = null;
-      let errored = false;
-      try {
-        result = await judgeAction(action, get().policyRules);
-      } catch {
-        errored = true;
-      }
-      await dwell;
-      if (isCancelled()) return;
+      if (sentinelOn) {
+        // ── Sentinel ON: live engine ──────────────────────────────────────
+        let result: JudgeResult | null = null;
+        let errored = false;
+        try {
+          result = await judgeAction(action, get().policyRules, get().thresholds);
+        } catch {
+          errored = true;
+        }
+        await dwell;
+        if (isCancelled()) return;
 
-      set((s) => ({
-        items: s.items.map((it, idx) =>
-          idx === i
-            ? {
-                ...it,
-                status: errored ? "error" : "resolved",
-                result,
-                inReview: result ? result.escalated : false,
+        set((s) => ({
+          items: s.items.map((it, idx) =>
+            idx === i
+              ? {
+                  ...it,
+                  status: errored ? "error" : "resolved",
+                  result,
+                  inReview: result ? result.escalated : false,
+                }
+              : it,
+          ),
+          activeReviewId:
+            result && result.escalated && !s.activeReviewId
+              ? action.id
+              : s.activeReviewId,
+          // Spotlight a block (dims the rest of the feed for a beat).
+          spotlightId:
+            result && result.verdict === "block" ? action.id : s.spotlightId,
+        }));
+
+        // Hold the dramatic catch, then clear the spotlight.
+        if (result && result.verdict === "block") {
+          const hold = action.headline ? 1700 : 1100;
+          delay(hold, token, () => get().runToken)
+            .then(() => {
+              if (!isCancelled() && get().spotlightId === action.id) {
+                set({ spotlightId: null });
               }
-            : it,
-        ),
-        // Auto-open the first escalation's review panel for the demo beat.
-        activeReviewId:
-          result && result.escalated && !s.activeReviewId
-            ? action.id
-            : s.activeReviewId,
-      }));
+            })
+            .catch(() => undefined);
+        }
+      } else {
+        // ── Sentinel OFF: the counterfactual ──────────────────────────────
+        await dwell;
+        if (isCancelled()) return;
+        const offOutcome = computeOffOutcome(action, get().thresholds);
+        set((s) => ({
+          items: s.items.map((it, idx) =>
+            idx === i
+              ? { ...it, status: "executed", offOutcome }
+              : it,
+          ),
+        }));
+      }
 
-      // Pause between actions.
+      // Pause between actions; headline catches get a longer beat.
+      const extra =
+        sentinelOn &&
+        get().items[i].result?.verdict === "block" &&
+        action.headline
+          ? 900
+          : 0;
       try {
-        await delay(get().speedMs, token, () => get().runToken);
+        await delay(get().speedMs + extra, token, () => get().runToken);
       } catch {
         return;
       }
@@ -176,10 +259,22 @@ export const useConsole = create<ConsoleState>((set, get) => ({
       items: freshItems(),
       runState: "idle",
       activeReviewId: null,
+      spotlightId: null,
       runToken: get().runToken + 1,
     }),
 
   setSpeed: (ms) => set({ speedMs: ms }),
+
+  setSentinelEnabled: (on) =>
+    set({
+      sentinelEnabled: on,
+      // Toggling the protection resets the feed so the contrast is clean.
+      items: freshItems(),
+      runState: "idle",
+      activeReviewId: null,
+      spotlightId: null,
+      runToken: get().runToken + 1,
+    }),
 
   openReview: (id) => set({ activeReviewId: id }),
   closeReview: () => set({ activeReviewId: null }),
@@ -196,9 +291,7 @@ export const useConsole = create<ConsoleState>((set, get) => ({
 
   updatePolicyRule: (id, text) =>
     set((s) => ({
-      policyRules: s.policyRules.map((r) =>
-        r.id === id ? { ...r, text } : r,
-      ),
+      policyRules: s.policyRules.map((r) => (r.id === id ? { ...r, text } : r)),
     })),
 
   togglePolicyRule: (id) =>
@@ -225,8 +318,16 @@ export const useConsole = create<ConsoleState>((set, get) => ({
       policyRules: s.policyRules.filter((r) => r.id !== id),
     })),
 
+  setThreshold: (key, value) =>
+    set((s) => ({
+      thresholds: { ...s.thresholds, [key]: value },
+    })),
+
   resetPolicy: () =>
-    set({ policyRules: DEFAULT_POLICY_RULES.map((r) => ({ ...r })) }),
+    set({
+      policyRules: DEFAULT_POLICY_RULES.map((r) => ({ ...r })),
+      thresholds: { ...DEFAULT_THRESHOLDS },
+    }),
 }));
 
 /** Derived stats selector. */
@@ -235,6 +336,8 @@ export interface ConsoleStats {
   autoApproved: number;
   escalated: number;
   blocked: number;
+  /** Sentinel-OFF: count + value of dangerous actions that slipped through. */
+  slippedThrough: number;
   total: number;
 }
 
@@ -243,13 +346,24 @@ export function selectStats(items: FeedItem[]): ConsoleStats {
   let autoApproved = 0;
   let escalated = 0;
   let blocked = 0;
+  let slippedThrough = 0;
   for (const it of items) {
     if (it.status === "resolved" && it.result) {
       processed++;
       if (it.result.verdict === "allow") autoApproved++;
       else escalated++;
       if (it.result.verdict === "block") blocked++;
+    } else if (it.status === "executed") {
+      processed++;
+      if (it.offOutcome?.dangerous) slippedThrough++;
     }
   }
-  return { processed, autoApproved, escalated, blocked, total: items.length };
+  return {
+    processed,
+    autoApproved,
+    escalated,
+    blocked,
+    slippedThrough,
+    total: items.length,
+  };
 }

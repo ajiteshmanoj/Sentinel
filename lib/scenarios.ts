@@ -54,6 +54,7 @@ export const SCENARIO: AgentAction[] = [
       reference: "Urgent parts order — requested via email",
     },
     reversible: false,
+    headline: true,
   },
 
   // 4. Duplicate-flagged payout — should REVIEW.
@@ -176,6 +177,7 @@ export const SCENARIO: AgentAction[] = [
       note: "Includes PII: names, emails, partial card data",
     },
     reversible: false,
+    headline: true,
   },
 
   // 12. Marketing blast to 12,000 users — should REVIEW (blast radius).

@@ -55,7 +55,27 @@ function Stat({
   );
 }
 
-export function StatsStrip({ stats }: { stats: ConsoleStats }) {
+export function StatsStrip({
+  stats,
+  sentinelOff = false,
+}: {
+  stats: ConsoleStats;
+  sentinelOff?: boolean;
+}) {
+  if (sentinelOff) {
+    return (
+      <div className="surface grid grid-cols-2 divide-white/[0.06] border-sentinel-red/20 sm:grid-cols-4 sm:divide-x">
+        <Stat label="Executed" value={stats.processed} accent="text-white" />
+        <Stat label="Reviewed" value={0} accent="text-white/40" />
+        <Stat label="Blocked" value={0} accent="text-white/40" />
+        <Stat
+          label="Slipped through"
+          value={stats.slippedThrough}
+          accent="text-sentinel-red"
+        />
+      </div>
+    );
+  }
   return (
     <div className="surface grid grid-cols-2 divide-white/[0.06] sm:grid-cols-4 sm:divide-x">
       <Stat label="Processed" value={stats.processed} accent="text-white" />

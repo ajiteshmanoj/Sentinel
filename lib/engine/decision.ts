@@ -12,6 +12,7 @@ import { evaluateGuardrails, worstGuardrailVerdict } from "./guardrails";
 import type {
   AgentAction,
   CaughtBy,
+  GuardrailThresholds,
   JudgeResult,
   PolicyRule,
   Verdict,
@@ -37,11 +38,12 @@ function mostSevere(a: Verdict, b: Verdict): Verdict {
 export async function judge(
   action: AgentAction,
   policyRules: PolicyRule[],
+  thresholds?: Partial<GuardrailThresholds>,
 ): Promise<JudgeResult> {
   const start = Date.now();
 
   // ── LAYER 1: deterministic guardrails (always run, in code, first) ────────
-  const guardrailHits = evaluateGuardrails(action);
+  const guardrailHits = evaluateGuardrails(action, thresholds);
   const guardrailVerdict = worstGuardrailVerdict(guardrailHits);
 
   // If a hard guardrail fires, we already have a defensible escalation. We STILL
