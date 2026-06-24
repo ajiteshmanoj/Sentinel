@@ -18,6 +18,25 @@ export function capitalizeFirst(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/**
+ * Belt-and-suspenders for the streamed narration: if the model slips into JSON
+ * (e.g. {"reason":"…"}), surface just the reason prose — progressively, even
+ * mid-stream — so raw braces never show in the card.
+ */
+export function cleanNarration(text: string): string {
+  const s = text.trimStart();
+  if (!s.startsWith("{") && !s.startsWith("[")) return text;
+  const m = s.match(/"reason"\s*:\s*"((?:[^"\\]|\\.)*)/);
+  if (m) {
+    return m[1]
+      .replace(/\\"/g, '"')
+      .replace(/\\n/g, " ")
+      .replace(/\\t/g, " ")
+      .trim();
+  }
+  return ""; // JSON started but the reason field hasn't streamed yet
+}
+
 export const DOMAIN_LABEL: Record<ActionDomain, string> = {
   payments: "Payments",
   treasury: "Treasury",

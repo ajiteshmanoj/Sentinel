@@ -55,7 +55,8 @@ const ADJUDICATOR_SCHEMA = {
   ],
 } as const;
 
-function buildUserMessage(action: AgentAction, rules: PolicyRule[]): string {
+/** Shared action + policy context block. */
+function buildContext(action: AgentAction, rules: PolicyRule[]): string {
   const enabledRules = rules.filter((r) => r.enabled);
   const rulesBlock =
     enabledRules.length > 0
@@ -78,9 +79,20 @@ function buildUserMessage(action: AgentAction, rules: PolicyRule[]): string {
     "",
     "ORGANISATION POLICY RULES:",
     rulesBlock,
-    "",
-    "Adjudicate this action now. Return only the structured fields.",
   ].join("\n");
+}
+
+/** For the structured adjudicator: asks for the strict JSON verdict. */
+function buildUserMessage(action: AgentAction, rules: PolicyRule[]): string {
+  return `${buildContext(action, rules)}\n\nAdjudicate this action now. Return only the structured fields.`;
+}
+
+/** For the streamed narration: asks for spoken-style prose, never JSON. */
+function buildNarrationMessage(action: AgentAction, rules: PolicyRule[]): string {
+  return `${buildContext(
+    action,
+    rules,
+  )}\n\nTalk through your risk read of this action now — 2 to 4 short sentences of plain English for a compliance reviewer. Do not output JSON, fields, lists, or quotes around the whole thing; just speak.`;
 }
 
 export interface AdjudicatorResult {
@@ -141,7 +153,7 @@ export async function streamNarration(
     stream: true,
     input: [
       { role: "system", content: SENTINEL_ANALYST_PROMPT },
-      { role: "user", content: buildUserMessage(action, rules) },
+      { role: "user", content: buildNarrationMessage(action, rules) },
     ],
   });
 

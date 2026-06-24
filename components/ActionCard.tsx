@@ -8,6 +8,7 @@ import {
   DOMAIN_LABEL,
   VERDICT_THEME,
   capitalizeFirst,
+  cleanNarration,
   formatMoney,
 } from "@/lib/format";
 import { CheckIcon, DomainIcon, LockIcon } from "./icons";
@@ -359,10 +360,10 @@ export function ActionCard({
                     Sentinel is reasoning · gpt-5.4-mini
                   </p>
                   <p className="text-sm leading-relaxed text-white/75">
-                    {streamedReasoning || (
+                    {cleanNarration(streamedReasoning) || (
                       <span className="text-white/40">Analyzing the action…</span>
                     )}
-                    {streamedReasoning && !reduce && (
+                    {cleanNarration(streamedReasoning) && !reduce && (
                       <span className="ml-0.5 inline-block h-3.5 w-1.5 translate-y-0.5 animate-pulse bg-indigo-soft/80" />
                     )}
                   </p>
