@@ -12,6 +12,12 @@ export function titleCase(s: string): string {
   return s.replace(/(^|[\s_-])(\w)/g, (_, p1, p2) => p1.replace(/[_-]/, " ") + p2.toUpperCase());
 }
 
+/** Sentence-case: capitalize the first character (leaves "$4,200 …" untouched). */
+export function capitalizeFirst(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export const DOMAIN_LABEL: Record<ActionDomain, string> = {
   payments: "Payments",
   treasury: "Treasury",

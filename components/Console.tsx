@@ -109,6 +109,7 @@ export function Console() {
               key={item.action.id}
               item={item}
               index={i}
+              paused={runState === "paused"}
               onOpenReview={openReview}
             />
           ))}

@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 import type { FeedItem } from "@/lib/store";
-import { DOMAIN_LABEL, VERDICT_THEME, formatMoney } from "@/lib/format";
+import { DOMAIN_LABEL, VERDICT_THEME, capitalizeFirst, formatMoney } from "@/lib/format";
 import { DomainIcon, LockIcon, ShieldIcon } from "./icons";
 import { RiskGauge } from "./RiskGauge";
 
@@ -159,7 +159,7 @@ export function ReviewPanel({
                         key={i}
                         className="rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs text-white/70"
                       >
-                        {f}
+                        {capitalizeFirst(f)}
                       </span>
                     ))}
                   </div>

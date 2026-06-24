@@ -3,9 +3,8 @@
 import { motion, useReducedMotion } from "framer-motion";
 import type { FeedItem } from "@/lib/store";
 import type { AgentAction } from "@/lib/engine/types";
-import { DOMAIN_LABEL, VERDICT_THEME, formatMoney } from "@/lib/format";
+import { DOMAIN_LABEL, VERDICT_THEME, capitalizeFirst, formatMoney } from "@/lib/format";
 import { CheckIcon, DomainIcon, LockIcon } from "./icons";
-import { RawResponse } from "./RawResponse";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -67,10 +66,12 @@ function PayloadFacts({ action }: { action: AgentAction }) {
 export function ActionCard({
   item,
   index,
+  paused = false,
   onOpenReview,
 }: {
   item: FeedItem;
   index: number;
+  paused?: boolean;
   onOpenReview: (id: string) => void;
 }) {
   const reduce = useReducedMotion();
@@ -79,6 +80,8 @@ export function ActionCard({
   const theme = verdict ? VERDICT_THEME[verdict] : null;
 
   const assessing = status === "assessing";
+  // While paused, freeze the in-flight "assessing" animation too.
+  const beamActive = assessing && !paused;
   const blocked = verdict === "block";
 
   return (
@@ -91,7 +94,7 @@ export function ActionCard({
         theme ? `${theme.border} ${theme.glow}` : "border-white/[0.07]"
       } ${blocked ? "border-sentinel-red/60" : ""}`}
     >
-      {/* Assessing scan beam */}
+      {/* Assessing scan beam — frozen while paused */}
       {assessing && !reduce && (
         <motion.div
           className="pointer-events-none absolute inset-0 z-10"
@@ -104,8 +107,12 @@ export function ActionCard({
                 "linear-gradient(90deg, transparent, rgba(139,124,240,0.28), transparent)",
             }}
             initial={{ x: "-120%" }}
-            animate={{ x: "320%" }}
-            transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+            animate={beamActive ? { x: "320%" } : { x: "-120%" }}
+            transition={
+              beamActive
+                ? { duration: 1.1, repeat: Infinity, ease: "easeInOut" }
+                : { duration: 0 }
+            }
           />
           <div className="absolute inset-0 border-y border-indigo-soft/20" />
         </motion.div>
@@ -160,8 +167,12 @@ export function ActionCard({
             <div className="shrink-0">
               {assessing && (
                 <span className="inline-flex items-center gap-2 rounded-full border border-indigo/30 bg-indigo/10 px-3 py-1 text-xs font-medium text-indigo-soft">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-soft" />
-                  Assessing…
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full bg-indigo-soft ${
+                      paused ? "" : "animate-pulse"
+                    }`}
+                  />
+                  {paused ? "Paused" : "Assessing…"}
                 </span>
               )}
               {status === "queued" && (
@@ -219,7 +230,7 @@ export function ActionCard({
                       key={i}
                       className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[0.7rem] text-white/60"
                     >
-                      {f}
+                      {capitalizeFirst(f)}
                     </span>
                   ))}
                 </div>
@@ -242,8 +253,6 @@ export function ActionCard({
                   )}
                 </div>
               )}
-
-              <RawResponse result={result} />
             </div>
           )}
         </div>
