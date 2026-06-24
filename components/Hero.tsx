@@ -13,9 +13,9 @@ export function Hero() {
       <AmbientBackground />
 
       {/* Top navigation */}
-      <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
+      <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-6">
         <Logo />
-        <nav className="hidden items-center gap-8 text-sm text-white/60 md:flex">
+        <nav className="hidden items-center gap-8 text-sm text-white/60 lg:flex">
           <a href="#console" className="transition-colors hover:text-white">
             Live console
           </a>
