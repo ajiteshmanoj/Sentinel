@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useConsole } from "@/lib/store";
-import { Logo } from "./Logo";
+import { ShieldIcon } from "./icons";
 
 // The guided arc — synced to real state (each await is a true store operation),
-// so captions never desync from what's on screen. Drives the curated 3-beat run.
+// so the persona's lines never desync from what's on screen. First person, so it
+// reads as Sentinel itself speaking to the viewer.
 type Step =
   | { kind: "caption"; text: string; ms: number }
   | { kind: "scroll"; to: string }
@@ -19,43 +20,43 @@ const STEPS: Step[] = [
   { kind: "mode", guided: true },
   {
     kind: "caption",
-    text: "AI agents can now move money — pay, refund, wire. Every bank asks the same question: can we trust them to act?",
-    ms: 5000,
+    text: "Hi — I'm Sentinel. I sit between your AI agents and the actions they take, so they can move money without anyone losing sleep. Let me show you.",
+    ms: 6200,
   },
   { kind: "sentinel", on: false },
   {
     kind: "caption",
-    text: "First, watch with no control layer. Sentinel is OFF.",
-    ms: 3200,
+    text: "First, watch what happens without me. Right now I'm switched off.",
+    ms: 3400,
   },
   { kind: "run" },
   {
     kind: "caption",
-    text: "The $25,000 wire executed — irreversible, gone. And a $9,800 fraud sailed straight through, unflagged. A regulator will ask why.",
-    ms: 5800,
+    text: "See that? A $25,000 wire just executed — irreversible, gone. And a $9,800 fraud sailed straight through, because nothing even flagged it.",
+    ms: 6000,
   },
   { kind: "sentinel", on: true },
   {
     kind: "caption",
-    text: "Now switch Sentinel ON — it sits in the execution path and judges every action live with gpt-5.4.",
-    ms: 4200,
+    text: "Now switch me on. I sit in the execution path and judge every action live, using gpt-5.4.",
+    ms: 4400,
   },
   { kind: "run" },
   {
     kind: "caption",
-    text: "The $25k hit a hard deterministic rule. The $9,800 passed every rule — the AI caught it alone. That's the value a rulebook can't deliver.",
-    ms: 6500,
+    text: "The $25,000 wire hit a hard rule, so I froze it. But the $9,800 passed every rule — I caught that one myself. That's what a rulebook can't do.",
+    ms: 6800,
   },
   { kind: "scroll", to: "audit" },
   {
     kind: "caption",
-    text: "Every decision is logged — tamper-evident, hash-chained, exportable. Audit-ready for a regulator.",
-    ms: 5200,
+    text: "And every decision I make is logged — tamper-evident, hash-chained, exportable. Audit-ready for a regulator.",
+    ms: 5400,
   },
   {
     kind: "caption",
-    text: "Sentinel — the control layer for AI agents that move money.",
-    ms: 4200,
+    text: "That's me. Sentinel — the control layer for AI agents that move money.",
+    ms: 4400,
   },
 ];
 
@@ -65,12 +66,84 @@ function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+/** Typewriter — reveals the line character by character so it reads as speech. */
+function useTypewriter(text: string, speed = 16) {
+  const reduce = useReducedMotion();
+  const [shown, setShown] = useState("");
+  useEffect(() => {
+    if (reduce || !text) {
+      setShown(text);
+      return;
+    }
+    setShown("");
+    let i = 0;
+    const id = setInterval(() => {
+      i += 1;
+      setShown(text.slice(0, i));
+      if (i >= text.length) clearInterval(id);
+    }, speed);
+    return () => clearInterval(id);
+  }, [text, speed, reduce]);
+  return shown;
+}
+
+/** Animated AI avatar — a glowing orb that "breathes," with a speaking equalizer. */
+function SentinelAvatar({ speaking }: { speaking: boolean }) {
+  const reduce = useReducedMotion();
+  return (
+    <span className="relative grid h-12 w-12 shrink-0 place-items-center md:h-14 md:w-14">
+      {/* outer pulse */}
+      {!reduce && (
+        <motion.span
+          className="absolute inset-0 rounded-full"
+          style={{ background: "radial-gradient(circle, rgba(139,124,240,0.5), transparent 70%)" }}
+          animate={{ scale: speaking ? [1, 1.5, 1] : [1, 1.25, 1], opacity: [0.6, 0, 0.6] }}
+          transition={{ duration: speaking ? 1.1 : 2.2, repeat: Infinity, ease: "easeInOut" }}
+        />
+      )}
+      {/* core orb */}
+      <motion.span
+        className="relative grid h-11 w-11 place-items-center rounded-full shadow-glow md:h-12 md:w-12"
+        style={{
+          background:
+            "radial-gradient(circle at 32% 28%, #8B7CF0, #6C5CE7 55%, #4B3FB0)",
+        }}
+        animate={reduce ? {} : { scale: speaking ? [1, 1.06, 1] : 1 }}
+        transition={{ duration: 0.9, repeat: speaking ? Infinity : 0, ease: "easeInOut" }}
+      >
+        <ShieldIcon className="h-5 w-5 text-white/95 md:h-6 md:w-6" />
+      </motion.span>
+      {/* speaking equalizer */}
+      {speaking && !reduce && (
+        <span className="absolute -bottom-1 right-0 flex items-end gap-[2px] rounded-full border border-white/10 bg-ink-800/90 px-1.5 py-1">
+          {[0, 1, 2].map((i) => (
+            <motion.span
+              key={i}
+              className="w-[2px] rounded-full bg-indigo-soft"
+              animate={{ height: [3, 9, 3] }}
+              transition={{
+                duration: 0.6,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: i * 0.15,
+              }}
+            />
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function GuidedDemo() {
   const active = useConsole((s) => s.guidedActive);
   const setActive = useConsole((s) => s.setGuidedActive);
   const [caption, setCaption] = useState<string>("");
   const [captionIndex, setCaptionIndex] = useState(0);
   const tokenRef = useRef(0);
+
+  const typed = useTypewriter(caption);
+  const speaking = typed.length < caption.length;
 
   useEffect(() => {
     if (!active) return;
@@ -81,7 +154,6 @@ export function GuidedDemo() {
       new Promise<void>((resolve) => setTimeout(resolve, ms));
 
     const finish = () => {
-      // Restore the full experience for free exploration.
       const api = useConsole.getState();
       api.setSpeed(1100);
       api.setMode("full");
@@ -90,7 +162,6 @@ export function GuidedDemo() {
 
     (async () => {
       const api = useConsole.getState;
-      // Snappier pacing for the guided run.
       api().setSpeed(650);
       let capCount = 0;
 
@@ -124,7 +195,7 @@ export function GuidedDemo() {
     })();
 
     return () => {
-      tokenRef.current++; // cancel any in-flight sequence
+      tokenRef.current++;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
@@ -156,39 +227,49 @@ export function GuidedDemo() {
             />
           </motion.div>
 
-          {/* Caption lower-third */}
+          {/* AI presenter — Sentinel speaking to the viewer */}
           <motion.div
-            className="pointer-events-none fixed inset-x-0 bottom-0 z-[70] flex justify-center px-4 pb-7"
-            initial={{ opacity: 0, y: 30 }}
+            className="pointer-events-none fixed inset-x-0 bottom-0 z-[70] flex justify-center px-4 pb-6 md:pb-8"
+            initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 30 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="pointer-events-auto w-full max-w-2xl">
-              <div className="surface-strong flex items-start gap-4 px-5 py-4 shadow-lift">
-                <Logo showWordmark={false} className="mt-0.5" />
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1 flex items-center justify-between">
-                    <span className="label-eyebrow">Guided demo</span>
+            <div className="pointer-events-auto w-full max-w-3xl">
+              <div className="relative flex items-start gap-4 rounded-2xl border border-indigo/30 bg-ink-700/80 px-5 py-4 shadow-[0_24px_70px_-20px_rgba(108,92,231,0.45)] backdrop-blur-2xl md:gap-5 md:px-7 md:py-6">
+                {/* soft glow accent */}
+                <div className="pointer-events-none absolute -left-8 -top-8 h-28 w-28 rounded-full bg-indigo/20 blur-3xl" />
+
+                <SentinelAvatar speaking={speaking} />
+
+                <div className="relative min-w-0 flex-1">
+                  <div className="mb-1.5 flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm font-semibold tracking-tight text-white md:text-base">
+                        Sentinel
+                      </span>
+                      <span className="flex items-center gap-1.5 rounded-full border border-indigo/30 bg-indigo/10 px-2 py-0.5 text-[0.62rem] font-medium uppercase tracking-[0.14em] text-indigo-soft">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-soft opacity-70" />
+                          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-soft" />
+                        </span>
+                        {speaking ? "speaking" : "AI guide"}
+                      </span>
+                    </span>
                     <button
                       onClick={stop}
-                      className="text-xs text-white/40 transition-colors hover:text-white"
+                      className="shrink-0 rounded-md px-2 py-1 text-xs text-white/40 transition-colors hover:bg-white/5 hover:text-white"
                     >
-                      Exit ✕
+                      Skip ✕
                     </button>
                   </div>
-                  <AnimatePresence mode="wait">
-                    <motion.p
-                      key={caption}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      transition={{ duration: 0.35 }}
-                      className="text-[0.95rem] leading-relaxed text-white/90"
-                    >
-                      {caption}
-                    </motion.p>
-                  </AnimatePresence>
+
+                  <p className="text-[1.05rem] font-medium leading-relaxed text-white/90 md:text-xl">
+                    {typed}
+                    {speaking && (
+                      <span className="ml-0.5 inline-block h-4 w-[3px] translate-y-0.5 animate-pulse rounded-full bg-indigo-soft md:h-5" />
+                    )}
+                  </p>
                 </div>
               </div>
             </div>
