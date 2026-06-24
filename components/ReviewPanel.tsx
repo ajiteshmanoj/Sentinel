@@ -31,6 +31,11 @@ export function ReviewPanel({
   const result = item?.result ?? null;
   const action = item?.action ?? null;
   const theme = result ? VERDICT_THEME[result.verdict] : null;
+  const aiCaught =
+    !!result &&
+    result.escalated &&
+    result.modelInvoked &&
+    result.guardrailHits.length === 0;
 
   return (
     <AnimatePresence>
@@ -116,6 +121,22 @@ export function ReviewPanel({
                   </h3>
                 </div>
               </div>
+
+              {/* AI hero badge — rules clear, the model caught it */}
+              {aiCaught && (
+                <div className="flex items-center gap-3 rounded-xl border border-indigo/40 bg-indigo/[0.1] px-4 py-3">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-indigo/20 text-base">
+                    🧠
+                  </span>
+                  <p className="text-sm text-white/85">
+                    <span className="font-semibold text-indigo-soft">
+                      Every deterministic rule passed.
+                    </span>{" "}
+                    This was caught by the AI alone — the risk no rulebook
+                    encodes.
+                  </p>
+                </div>
+              )}
 
               {/* Gauge + scores */}
               <div className="surface flex items-center gap-6 p-5">

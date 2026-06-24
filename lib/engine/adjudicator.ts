@@ -11,8 +11,12 @@ import {
   JUDGE_MODEL,
   JUDGE_REASONING_EFFORT,
   MODEL_TIMEOUT_MS,
+  SUMMARY_MODEL,
 } from "./config";
-import { SENTINEL_LAYER2_SYSTEM_PROMPT } from "./prompt";
+import {
+  SENTINEL_ANALYST_PROMPT,
+  SENTINEL_LAYER2_SYSTEM_PROMPT,
+} from "./prompt";
 import type { AdjudicatorOutput, AgentAction, PolicyRule } from "./types";
 
 let client: OpenAI | null = null;
@@ -119,6 +123,36 @@ export async function adjudicate(
 
   const parsed = JSON.parse(raw) as AdjudicatorOutput;
   return { output: normalize(parsed), raw };
+}
+
+/**
+ * Stream a live, plain-English risk narration (gpt-5.4-mini) token-by-token via
+ * the onToken callback. This is the visible "watch the AI think" layer — it is
+ * NOT the authoritative verdict. Best-effort: callers ignore failures.
+ */
+export async function streamNarration(
+  action: AgentAction,
+  rules: PolicyRule[],
+  onToken: (text: string) => void,
+): Promise<string> {
+  const stream = await getClient().responses.create({
+    model: SUMMARY_MODEL,
+    reasoning: { effort: "low" },
+    stream: true,
+    input: [
+      { role: "system", content: SENTINEL_ANALYST_PROMPT },
+      { role: "user", content: buildUserMessage(action, rules) },
+    ],
+  });
+
+  let full = "";
+  for await (const event of stream) {
+    if (event.type === "response.output_text.delta") {
+      full += event.delta;
+      onToken(event.delta);
+    }
+  }
+  return full;
 }
 
 /** Defensive clamping — Structured Outputs already guarantees shape. */

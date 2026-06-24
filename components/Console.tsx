@@ -105,9 +105,11 @@ export function Console() {
           Watch a poisoned wire get frozen.
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-white/60">
-          A scripted agent fires real money-movement actions. Every verdict is
-          judged <span className="text-white/90">live</span> — edit any rule
-          below and re-run, and the verdicts change. Nothing here is hardcoded.
+          A scripted agent fires real money-movement actions. Watch{" "}
+          <span className="text-white/90">gpt-5.4 reason in real time</span> on
+          each one — the deterministic rules catch the obvious, the model catches
+          the fraud a rulebook never could. Edit any rule and re-run; nothing
+          here is hardcoded.
         </p>
       </Reveal>
 

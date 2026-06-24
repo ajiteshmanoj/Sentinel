@@ -41,6 +41,8 @@ export interface FeedItem {
   status: ItemStatus;
   result: JudgeResult | null;
   offOutcome: OffOutcome | null;
+  /** Live gpt-5.4-mini narration, streamed token-by-token while assessing. */
+  streamedReasoning: string;
   humanDecision: HumanDecision;
   inReview: boolean;
 }
@@ -82,6 +84,7 @@ const freshItems = (): FeedItem[] =>
     status: "queued",
     result: null,
     offOutcome: null,
+    streamedReasoning: "",
     humanDecision: null,
     inReview: false,
   }));
@@ -107,6 +110,54 @@ async function judgeAction(
   });
   if (!res.ok) throw new Error(`Engine returned ${res.status}`);
   return (await res.json()) as JudgeResult;
+}
+
+/**
+ * Streaming judge: reads the SSE feed, forwarding narration tokens live and
+ * returning the authoritative verdict. Throws if the stream errors so the caller
+ * can fall back to the non-streaming endpoint.
+ */
+async function judgeActionStream(
+  action: AgentAction,
+  policyRules: PolicyRule[],
+  thresholds: GuardrailThresholds,
+  onToken: (text: string) => void,
+): Promise<JudgeResult> {
+  const res = await fetch("/api/judge/stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, policyRules, thresholds }),
+  });
+  if (!res.ok || !res.body) throw new Error(`Stream returned ${res.status}`);
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let result: JudgeResult | null = null;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const chunks = buffer.split("\n\n");
+    buffer = chunks.pop() ?? "";
+    for (const chunk of chunks) {
+      const line = chunk.trim();
+      if (!line.startsWith("data:")) continue;
+      const evt = JSON.parse(line.slice(5).trim()) as {
+        type: string;
+        text?: string;
+        result?: JudgeResult;
+        message?: string;
+      };
+      if (evt.type === "token" && evt.text) onToken(evt.text);
+      else if (evt.type === "verdict" && evt.result) result = evt.result;
+      else if (evt.type === "error") throw new Error(evt.message ?? "stream error");
+    }
+  }
+
+  if (!result) throw new Error("stream ended without a verdict");
+  return result;
 }
 
 /** Sentinel-OFF: compute the counterfactual outcome from the same rules. */
@@ -164,10 +215,10 @@ export const useConsole = create<ConsoleState>((set, get) => ({
       const action = cur.action;
       const sentinelOn = get().sentinelEnabled;
 
-      // Mark assessing / executing.
+      // Mark assessing / executing (reset any prior streamed narration).
       set((s) => ({
         items: s.items.map((it, idx) =>
-          idx === i ? { ...it, status: "assessing" } : it,
+          idx === i ? { ...it, status: "assessing", streamedReasoning: "" } : it,
         ),
       }));
 
@@ -179,13 +230,37 @@ export const useConsole = create<ConsoleState>((set, get) => ({
       ).catch(() => undefined);
 
       if (sentinelOn) {
-        // ── Sentinel ON: live engine ──────────────────────────────────────
+        // ── Sentinel ON: live engine (streamed, with fallback) ────────────
         let result: JudgeResult | null = null;
         let errored = false;
+        const onToken = (text: string) => {
+          if (isCancelled()) return;
+          set((s) => ({
+            items: s.items.map((it, idx) =>
+              idx === i
+                ? { ...it, streamedReasoning: it.streamedReasoning + text }
+                : it,
+            ),
+          }));
+        };
         try {
-          result = await judgeAction(action, get().policyRules, get().thresholds);
+          result = await judgeActionStream(
+            action,
+            get().policyRules,
+            get().thresholds,
+            onToken,
+          );
         } catch {
-          errored = true;
+          // Streaming failed — fall back to the rock-solid non-streaming engine.
+          try {
+            result = await judgeAction(
+              action,
+              get().policyRules,
+              get().thresholds,
+            );
+          } catch {
+            errored = true;
+          }
         }
         await dwell;
         if (isCancelled()) return;

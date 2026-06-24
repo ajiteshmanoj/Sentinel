@@ -111,7 +111,8 @@ export function ActionCard({
   onOpenReview: (id: string) => void;
 }) {
   const reduce = useReducedMotion();
-  const { action, status, result, offOutcome, humanDecision } = item;
+  const { action, status, result, offOutcome, streamedReasoning, humanDecision } =
+    item;
   const verdict = result?.verdict;
   const theme = verdict ? VERDICT_THEME[verdict] : null;
 
@@ -120,6 +121,13 @@ export function ActionCard({
   const blocked = verdict === "block";
   const executed = status === "executed";
   const offDanger = executed && offOutcome?.dangerous;
+  // The AI hero moment: escalated with NO deterministic rule firing → the model
+  // alone caught it. This is the value rules can't deliver, made visible.
+  const aiCaught =
+    !!result &&
+    result.escalated &&
+    result.modelInvoked &&
+    result.guardrailHits.length === 0;
 
   return (
     <motion.div
@@ -318,11 +326,34 @@ export function ActionCard({
             </div>
           </div>
 
-          {/* Executing label while assessing */}
+          {/* Executing label + live AI narration while assessing */}
           {assessing && (
-            <p className="mt-3 font-mono text-xs text-indigo-soft/80">
-              {paused ? "Paused mid-flight — Sentinel is holding execution." : `${executingLabel(action)}…`}
-            </p>
+            <div className="mt-3 space-y-2.5">
+              <p className="font-mono text-xs text-indigo-soft/80">
+                {paused
+                  ? "Paused mid-flight — Sentinel is holding execution."
+                  : `${executingLabel(action)}…`}
+              </p>
+              {!paused && (
+                <div className="rounded-xl border border-indigo/20 bg-indigo/[0.05] p-3">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-indigo-soft/80">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-soft opacity-70" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-soft" />
+                    </span>
+                    Sentinel is reasoning · gpt-5.4-mini
+                  </p>
+                  <p className="text-sm leading-relaxed text-white/75">
+                    {streamedReasoning || (
+                      <span className="text-white/40">Analyzing the action…</span>
+                    )}
+                    {streamedReasoning && !reduce && (
+                      <span className="ml-0.5 inline-block h-3.5 w-1.5 translate-y-0.5 animate-pulse bg-indigo-soft/80" />
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           <div className="mt-4">
@@ -332,6 +363,21 @@ export function ActionCard({
           {/* Resolved detail (Sentinel ON) */}
           {result && (
             <div className="mt-4 space-y-3">
+              {/* The AI hero badge: rules all clear, the model caught it. */}
+              {aiCaught && (
+                <div className="flex items-center gap-2.5 rounded-xl border border-indigo/40 bg-indigo/[0.1] px-3.5 py-2.5">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-indigo/20 text-sm">
+                    🧠
+                  </span>
+                  <p className="text-sm text-white/85">
+                    <span className="font-semibold text-indigo-soft">
+                      Every deterministic rule passed.
+                    </span>{" "}
+                    The AI caught this one — no rulebook would.
+                  </p>
+                </div>
+              )}
+
               {result.caughtBy && (
                 <div className="flex flex-wrap items-center gap-2">
                   <span
