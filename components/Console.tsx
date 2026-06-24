@@ -68,6 +68,7 @@ export function Console() {
   const activeReviewId = useConsole((s) => s.activeReviewId);
   const spotlightId = useConsole((s) => s.spotlightId);
   const sentinelOn = useConsole((s) => s.sentinelEnabled);
+  const mode = useConsole((s) => s.mode);
 
   const run = useConsole((s) => s.runScenario);
   const pause = useConsole((s) => s.pause);
@@ -199,6 +200,7 @@ export function Console() {
               index={i}
               paused={runState === "paused"}
               dimmed={spotlightId !== null && spotlightId !== item.action.id}
+              autoScroll={mode === "guided" && runState === "running"}
               onOpenReview={openReview}
             />
           ))}

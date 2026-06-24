@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { FeedItem } from "@/lib/store";
 import type { AgentAction } from "@/lib/engine/types";
@@ -102,15 +103,19 @@ export function ActionCard({
   index,
   paused = false,
   dimmed = false,
+  autoScroll = false,
   onOpenReview,
 }: {
   item: FeedItem;
   index: number;
   paused?: boolean;
   dimmed?: boolean;
+  /** Center this card in view as it is judged (used by the guided demo). */
+  autoScroll?: boolean;
   onOpenReview: (id: string) => void;
 }) {
   const reduce = useReducedMotion();
+  const cardRef = useRef<HTMLDivElement>(null);
   const { action, status, result, offOutcome, streamedReasoning, humanDecision } =
     item;
   const verdict = result?.verdict;
@@ -129,8 +134,18 @@ export function ActionCard({
     result.modelInvoked &&
     result.guardrailHits.length === 0;
 
+  // During the guided demo, keep the card being judged centered in view so the
+  // viewer always sees the action (and the catch) instead of an empty scroll.
+  useEffect(() => {
+    if (!autoScroll) return;
+    if (status === "assessing" || status === "resolved" || status === "executed") {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [autoScroll, status]);
+
   return (
     <motion.div
+      ref={cardRef}
       layout
       initial={{ opacity: 0, y: 18, scale: 0.98 }}
       animate={{
