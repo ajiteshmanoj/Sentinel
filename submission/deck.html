@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Sentinel — Pitch Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07070C; --ink:#0B0B14; --card:#11111D;
+    --indigo:#6C5CE7; --indigo-soft:#8B7CF0; --indigo-deep:#4B3FB0;
+    --red:#FF3B5C; --green:#33D69F; --amber:#F5A623;
+    --white:#ffffff; --w70:rgba(255,255,255,.70); --w55:rgba(255,255,255,.55);
+    --w40:rgba(255,255,255,.40); --line:rgba(255,255,255,.09);
+  }
+  @page{size:1280px 720px;margin:0}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{font-family:'Inter',system-ui,sans-serif;color:var(--white)}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+
+  .slide{
+    position:relative;width:1280px;height:720px;overflow:hidden;
+    background:var(--bg);
+    background-image:
+      radial-gradient(ellipse 70% 50% at 78% -8%, rgba(108,92,231,.20), transparent 60%),
+      radial-gradient(ellipse 50% 50% at 0% 110%, rgba(75,63,176,.16), transparent 60%);
+    padding:64px 72px;display:flex;flex-direction:column;
+    page-break-after:always;break-after:page;
+  }
+  .slide:last-child{page-break-after:auto}
+
+  /* chrome */
+  .brand{position:absolute;top:34px;left:72px;display:flex;align-items:center;gap:11px}
+  .brand .wm{font-size:20px;font-weight:600;letter-spacing:-.03em}
+  .pageno{position:absolute;bottom:30px;right:72px;font-size:12px;color:var(--w40);letter-spacing:.05em}
+  .foot{position:absolute;bottom:30px;left:72px;font-size:12px;color:var(--w40);letter-spacing:.04em}
+
+  .eyebrow{font-size:13px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--indigo-soft)}
+  h1{font-size:62px;line-height:1.03;font-weight:700;letter-spacing:-.035em}
+  h2{font-size:46px;line-height:1.05;font-weight:700;letter-spacing:-.03em}
+  .accent{color:var(--indigo-soft)}
+  .red{color:var(--red)} .green{color:var(--green)} .amber{color:var(--amber)}
+  .lead{font-size:22px;line-height:1.5;color:var(--w70);font-weight:400}
+  .small{font-size:16px;line-height:1.55;color:var(--w55)}
+
+  .body{flex:1;display:flex;flex-direction:column;justify-content:center}
+  .mt8{margin-top:8px}.mt16{margin-top:16px}.mt22{margin-top:22px}.mt30{margin-top:30px}.mt40{margin-top:40px}
+
+  .chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);
+    background:rgba(255,255,255,.04);border-radius:999px;padding:8px 16px;font-size:14px;color:var(--w70);font-weight:500}
+  .chip.accent{border-color:rgba(108,92,231,.4);background:rgba(108,92,231,.12);color:var(--indigo-soft)}
+  .dot{width:8px;height:8px;border-radius:999px;background:var(--indigo-soft)}
+
+  .cards{display:grid;gap:18px}
+  .cards.c2{grid-template-columns:1fr 1fr}
+  .cards.c3{grid-template-columns:1fr 1fr 1fr}
+  .cards.c4{grid-template-columns:repeat(4,1fr)}
+  .card{border:1px solid var(--line);background:rgba(255,255,255,.025);border-radius:18px;padding:24px}
+  .card.glow{box-shadow:0 24px 60px -30px rgba(108,92,231,.5)}
+  .card .k{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--w40)}
+  .card .t{font-size:19px;font-weight:600;margin-top:6px}
+  .card .d{font-size:15px;line-height:1.5;color:var(--w55);margin-top:8px}
+
+  .panel{border:1px solid var(--line);background:rgba(255,255,255,.02);border-radius:18px;padding:22px 26px}
+  .panel.red{border-color:rgba(255,59,92,.35);background:rgba(255,59,92,.06)}
+  .panel.green{border-color:rgba(51,214,159,.30);background:rgba(51,214,159,.05)}
+  .panel.indigo{border-color:rgba(108,92,231,.35);background:rgba(108,92,231,.08)}
+
+  ul.ticks{list-style:none;display:flex;flex-direction:column;gap:12px}
+  ul.ticks li{display:flex;gap:12px;align-items:flex-start;font-size:18px;color:var(--w70)}
+  ul.ticks li .b{flex:none;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;
+    background:rgba(108,92,231,.18);border:1px solid rgba(108,92,231,.4);color:var(--indigo-soft);font-size:12px;margin-top:2px}
+
+  /* flow diagram */
+  .flow{display:flex;align-items:stretch;gap:10px}
+  .step{flex:1;border:1px solid var(--line);background:rgba(255,255,255,.025);border-radius:14px;padding:16px 14px;text-align:center}
+  .step .lab{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--w40)}
+  .step .nm{font-size:15px;font-weight:600;margin-top:6px}
+  .step.scope{border-color:rgba(75,208,231,.4)}
+  .step.guard{border-color:rgba(108,92,231,.45)}
+  .step.model{border-color:rgba(245,166,35,.4)}
+  .step.human{border-color:rgba(51,214,159,.4)}
+  .arrow{display:flex;align-items:center;color:var(--w40);font-size:20px}
+
+  .spine{font-size:20px;line-height:1.55;color:var(--white);font-weight:500}
+  .spine b{color:var(--indigo-soft);font-weight:600}
+
+  .verdict{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700;border:1px solid}
+  .v-block{color:var(--red);border-color:rgba(255,59,92,.5);background:rgba(255,59,92,.1)}
+  .v-review{color:var(--amber);border-color:rgba(245,166,35,.45);background:rgba(245,166,35,.1)}
+  .v-allow{color:var(--green);border-color:rgba(51,214,159,.45);background:rgba(51,214,159,.1)}
+</style>
+</head>
+<body>
+
+<!-- 1 · TITLE ------------------------------------------------------------- -->
+<section class="slide">
+  <div class="body" style="justify-content:center">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:30px">
+      <svg width="46" height="46" viewBox="0 0 40 40" fill="none"><defs><linearGradient id="g" x1="0" y1="0" x2="40" y2="40"><stop offset="0%" stop-color="#8B7CF0"/><stop offset="100%" stop-color="#6C5CE7"/></linearGradient></defs><path d="M20 3.5l13 4.2v9.3c0 8.2-5.4 14.6-13 17-7.6-2.4-13-8.8-13-17V7.7L20 3.5z" stroke="url(#g)" stroke-width="2" stroke-linejoin="round" fill="rgba(108,92,231,.08)"/><path d="M13.5 20.2l4.6 4.6L27 14.5" stroke="url(#g)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span style="font-size:30px;font-weight:700;letter-spacing:-.03em">Sentinel</span>
+    </div>
+    <h1>The control layer for AI agents<br/>that take <span class="accent">real-world action.</span></h1>
+    <p class="lead mt22" style="max-width:880px">Before an agent moves money, changes access, or touches production, Sentinel judges its risk in real time. Routine actions pass. Risky, irreversible, or out-of-scope ones are <b style="color:#fff;font-weight:600">frozen and escalated to a human</b> — with a tamper-evident audit trail, in seconds.</p>
+    <div class="mt30" style="display:flex;gap:12px">
+      <span class="chip accent"><span class="dot"></span> Live demo</span>
+      <span class="chip mono">sentinel-sable-nu.vercel.app</span>
+    </div>
+  </div>
+  <div class="foot">TheFirst Spark Challenge · [Team name]</div>
+  <div class="pageno">01 / 10</div>
+</section>
+
+<!-- 2 · CHALLENGE --------------------------------------------------------- -->
+<section class="slide">
+  <div class="brand"><svg width="24" height="24" viewBox="0 0 40 40" fill="none"><path d="M20 3.5l13 4.2v9.3c0 8.2-5.4 14.6-13 17-7.6-2.4-13-8.8-13-17V7.7L20 3.5z" stroke="#8B7CF0" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 20.2l4.6 4.6L27 14.5" stroke="#8B7CF0" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm">Sentinel</span></div>
+  <div class="body">
+    <p class="eyebrow">01 · Challenge</p>
+    <h2 class="mt16">Trust &amp; permissions for<br/>autonomous agents</h2>
+    <div class="panel indigo mt30" style="max-width:980px">
+      <p class="small" style="color:var(--w40);font-weight:700;letter-spacing:.1em;text-transform:uppercase">Theme A · Statement A-1</p>
+      <p class="lead mt8" style="color:#fff">“How might we design <span class="accent">permission layers, audit trails, and fail-safes</span> so users can trust agents to act on their behalf?”</p>
+    </div>
+    <p class="lead mt30" style="max-width:900px">AI agents can finally take actions. The question is no longer <i>can they</i> — it&apos;s <b style="color:#fff;font-weight:600">can we trust them to.</b></p>
+  </div>
+  <div class="foot">TheFirst Spark Challenge</div>
+  <div class="pageno">02 / 10</div>
+</section>
+
+<!-- 3 · TARGET USER & USE CASE -------------------------------------------- -->
+<section class="slide">
+  <div class="brand"><svg width="24" height="24" viewBox="0 0 40 40" fill="none"><path d="M20 3.5l13 4.2v9.3c0 8.2-5.4 14.6-13 17-7.6-2.4-13-8.8-13-17V7.7L20 3.5z" stroke="#8B7CF0" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 20.2l4.6 4.6L27 14.5" stroke="#8B7CF0" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm">Sentinel</span></div>
+  <div class="body">
+    <p class="eyebrow">02 · Target user &amp; use case</p>
+    <h2 class="mt16">Risk, fraud &amp; compliance leaders<br/>at fintechs &amp; digital banks</h2>
+    <div class="panel green mt30" style="max-width:1000px">
+      <p class="small" style="color:var(--green);font-weight:700;letter-spacing:.1em;text-transform:uppercase">The moment</p>
+      <p class="lead mt8" style="color:#fff">…at the exact moment an AI agent is about to <b style="color:#fff;font-weight:600">execute a consequential action</b> — a $25,000 wire, a refund outside policy, a customer-data export — and they have no safe way to let it act.</p>
+    </div>
+    <div class="cards c4 mt30">
+      <div class="card"><div class="k">Industry</div><div class="t" style="color:var(--w55);font-size:16px">Financial services</div></div>
+      <div class="card"><div class="k">+ Role</div><div class="t" style="color:var(--w55);font-size:16px">Risk &amp; compliance</div></div>
+      <div class="card"><div class="k">+ Moment</div><div class="t" style="color:var(--w55);font-size:16px">An agent about to act</div></div>
+      <div class="card glow" style="border-color:rgba(108,92,231,.5)"><div class="k accent" style="color:var(--indigo-soft)">+ Struggle</div><div class="t" style="font-size:16px">Can&apos;t safely delegate it</div></div>
+    </div>
+  </div>
+  <div class="foot">TheFirst Spark Challenge</div>
+  <div class="pageno">03 / 10</div>
+</section>
+
+<!-- 4 · PAIN & BOTTLENECK -------------------------------------------------- -->
+<section class="slide">
+  <div class="brand"><svg width="24" height="24" viewBox="0 0 40 40" fill="none"><path d="M20 3.5l13 4.2v9.3c0 8.2-5.4 14.6-13 17-7.6-2.4-13-8.8-13-17V7.7L20 3.5z" stroke="#8B7CF0" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 20.2l4.6 4.6L27 14.5" stroke="#8B7CF0" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm">Sentinel</span></div>
+  <div class="body">
+    <p class="eyebrow">03 · Pain &amp; bottleneck</p>
+    <div class="cards c2 mt22">
+      <div class="panel red">
+        <p class="small red" style="font-weight:700;letter-spacing:.1em;text-transform:uppercase">Pain — the symptom</p>
+        <p class="lead mt8" style="color:#fff">Capable agents sit unused. Teams won&apos;t let an agent move money, because one wrong, <b style="color:#fff;font-weight:600">irreversible</b> action — and a regulator asks why.</p>
+      </div>
+      <div class="panel indigo">
+        <p class="small accent" style="font-weight:700;letter-spacing:.1em;text-transform:uppercase">Bottleneck — the root cause</p>
+        <p class="lead mt8" style="color:#fff">Agents inherit broad, standing credentials with <b style="color:#fff;font-weight:600">no per-action permission model</b> — no scoped least-privilege, no human checkpoint, no audit. There&apos;s no safe way to delegate a single action.</p>
+      </div>
+    </div>
+    <div class="panel mt30" style="text-align:center;border-color:rgba(108,92,231,.3)">
+      <p class="lead" style="color:#fff">Our solution attacks the <span class="accent">bottleneck</span> — a permission model for <i>actions</i>, not just identities.</p>
+    </div>
+  </div>
+  <div class="foot">TheFirst Spark Challenge</div>
+  <div class="pageno">04 / 10</div>
+</section>
+
+<!-- 5 · CURRENT ALTERNATIVE ------------------------------------------------ -->
+<section class="slide">
+  <div class="brand"><svg width="24" height="24" viewBox="0 0 40 40" fill="none"><path d="M20 3.5l13 4.2v9.3c0 8.2-5.4 14.6-13 17-7.6-2.4-13-8.8-13-17V7.7L20 3.5z" stroke="#8B7CF0" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 20.2l4.6 4.6L27 14.5" stroke="#8B7CF0" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm">Sentinel</span></div>
+  <div class="body">
+    <p class="eyebrow">04 · Current alternative</p>
+    <h2 class="mt16">What teams do today —<br/>and why it fails</h2>
+    <div class="cards c3 mt30">
+      <div class="card"><div class="k">Option A</div><div class="t">Keep a human on everything</div><div class="d">Safe, but it defeats the entire point of deploying an agent. Doesn&apos;t scale.</div></div>
+      <div class="card"><div class="k">Option B</div><div class="t">“Add a flag in a sprint”</div><div class="d">Brittle and home-grown. Doesn&apos;t survive an audit — or the liability.</div></div>
+      <div class="card"><div class="k">Option C</div><div class="t">Trust each vendor&apos;s guardrails</div><div class="d">Not neutral, not auditable. Each vendor grades its own homework.</div></div>
+    </div>
+  </div>
+  <div class="foot">TheFirst Spark Challenge</div>
+  <div class="pageno">05 / 10</div>
+</section>
+
+<!-- 6 · SOLUTION & VALUE PROP ---------------------------------------------- -->
+<section class="slide">
+  <div class="brand"><svg width="24" height="24" viewBox="0 0 40 40" fill="none"><path d="M20 3.5l13 4.2v9.3c0 8.2-5.4 14.6-13 17-7.6-2.4-13-8.8-13-17V7.7L20 3.5z" stroke="#8B7CF0" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 20.2l4.6 4.6L27 14.5" stroke="#8B7CF0" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm">Sentinel</span></div>
+  <div class="body">
+    <p class="eyebrow">05 · Solution &amp; value</p>
+    <h2 class="mt16">An audit-grade control layer<br/>between the agent and the action</h2>
+    <div class="panel indigo mt30" style="max-width:1040px">
+      <p class="spine">We help <b>risk &amp; compliance teams</b> who struggle with <b>trusting AI agents to act on money</b>, at <b>the moment an agent executes a consequential action</b>, by solving <b>the missing per-action permission model</b> through <b>a layer that scopes, judges, and escalates every action</b> — so they can <b>finally deploy their agents safely.</b></p>
+    </div>
+    <div class="cards c3 mt30">
+      <div class="card glow"><div class="t accent">Deploy agents safely</div><div class="d">Routine actions pass straight through, automatically.</div></div>
+      <div class="card glow"><div class="t accent">Catch the risky action</div><div class="d">Frozen and escalated to a human before it executes.</div></div>
+      <div class="card glow"><div class="t accent">Prove it to a regulator</div><div class="d">Every decision logged, tamper-evident, exportable.</div></div>
+    </div>
+  </div>
+  <div class="foot">TheFirst Spark Challenge</div>
+  <div class="pageno">06 / 10</div>
+</section>
+
+<!-- 7 · HOW IT WORKS ------------------------------------------------------- -->
+<section class="slide">
+  <div class="brand"><svg width="24" height="24" viewBox="0 0 40 40" fill="none"><path d="M20 3.5l13 4.2v9.3c0 8.2-5.4 14.6-13 17-7.6-2.4-13-8.8-13-17V7.7L20 3.5z" stroke="#8B7CF0" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 20.2l4.6 4.6L27 14.5" stroke="#8B7CF0" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm">Sentinel</span></div>
+  <div class="body">
+    <p class="eyebrow">06 · How it works</p>
+    <h2 class="mt16">A hybrid engine — not a wrapper</h2>
+    <div class="flow mt30">
+      <div class="step"><div class="lab">Agent</div><div class="nm">Proposes an action</div></div>
+      <div class="arrow">→</div>
+      <div class="step scope"><div class="lab">Layer 0</div><div class="nm">Capability scope</div></div>
+      <div class="arrow">→</div>
+      <div class="step guard"><div class="lab">Layer 1</div><div class="nm">Deterministic guardrails</div></div>
+      <div class="arrow">→</div>
+      <div class="step model"><div class="lab">Layer 2</div><div class="nm">gpt-5.4 adjudicator</div></div>
+      <div class="arrow">→</div>
+      <div class="step human"><div class="lab">Owner</div><div class="nm">Human review</div></div>
+    </div>
+    <div class="cards c3 mt30">
+      <div class="card"><div class="t" style="font-size:17px">Least-privilege first</div><div class="d">Out of an agent&apos;s grant? Denied on sight — before risk is even considered.</div></div>
+      <div class="card"><div class="t" style="font-size:17px">Fail-safe bias</div><div class="d">Low confidence or any error → escalate to a human. Never auto-approves by mistake.</div></div>
+      <div class="card"><div class="t" style="font-size:17px">“Caught by” provenance</div><div class="d">Every decision is labelled and written to a tamper-evident audit trail.</div></div>
+    </div>
+  </div>
+  <div class="foot">TheFirst Spark Challenge</div>
+  <div class="pageno">07 / 10</div>
+</section>
+
+<!-- 8 · DIFFERENTIATION ---------------------------------------------------- -->
+<section class="slide">
+  <div class="brand"><svg width="24" height="24" viewBox="0 0 40 40" fill="none"><path d="M20 3.5l13 4.2v9.3c0 8.2-5.4 14.6-13 17-7.6-2.4-13-8.8-13-17V7.7L20 3.5z" stroke="#8B7CF0" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 20.2l4.6 4.6L27 14.5" stroke="#8B7CF0" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm">Sentinel</span></div>
+  <div class="body">
+    <p class="eyebrow">07 · Why it&apos;s not a wrapper</p>
+    <h2 class="mt16">Rules catch the obvious.<br/>The AI catches the fraud they miss.</h2>
+    <div class="panel mt22" style="border-color:rgba(245,166,35,.35);background:rgba(245,166,35,.05)">
+      <p class="small" style="color:var(--amber);font-weight:700;letter-spacing:.08em;text-transform:uppercase">Live example</p>
+      <p class="lead mt8" style="color:#fff">A <b style="color:#fff;font-weight:600">$9,800</b> payment — just under the $10k approval line, established vendor, reversible. It passes <i>every</i> deterministic rule. <span class="amber">gpt-5.4</span> catches it anyway: threshold-shopping + recently-changed bank details + urgency = invoice-redirection fraud. <span class="verdict v-review">● Caught by the risk model</span></p>
+    </div>
+    <div class="cards c4 mt30">
+      <div class="card"><div class="t" style="font-size:16px">Three catch types</div><div class="d">Scope · guardrail · risk model — each labelled.</div></div>
+      <div class="card"><div class="t" style="font-size:16px">Delegation &amp; revocation</div><div class="d">User→agent→action; cut off an agent instantly.</div></div>
+      <div class="card"><div class="t" style="font-size:16px">Tamper-evident audit</div><div class="d">SHA-256 hash-chained, exportable log.</div></div>
+      <div class="card"><div class="t" style="font-size:16px">Visible &amp; provable</div><div class="d">Watch it reason live; edit a rule, verdict changes.</div></div>
+    </div>
+  </div>
+  <div class="foot">TheFirst Spark Challenge</div>
+  <div class="pageno">08 / 10</div>
+</section>
+
+<!-- 9 · WHY NOW / BEYOND FINANCE / MOAT ------------------------------------ -->
+<section class="slide">
+  <div class="brand"><svg width="24" height="24" viewBox="0 0 40 40" fill="none"><path d="M20 3.5l13 4.2v9.3c0 8.2-5.4 14.6-13 17-7.6-2.4-13-8.8-13-17V7.7L20 3.5z" stroke="#8B7CF0" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 20.2l4.6 4.6L27 14.5" stroke="#8B7CF0" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm">Sentinel</span></div>
+  <div class="body">
+    <p class="eyebrow">08 · Why now &amp; defensibility</p>
+    <h2 class="mt16">Finance-first. Horizontal by design.</h2>
+    <div class="flow mt30" style="gap:14px">
+      <div class="step" style="border-color:rgba(108,92,231,.6)"><div class="lab accent" style="color:var(--indigo-soft)">Beachhead</div><div class="nm">Fintechs &amp; digital banks</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="lab">Expand</div><div class="nm">Insurance &amp; healthcare</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="lab">Platform</div><div class="nm">Any agent · any action</div></div>
+    </div>
+    <p class="lead mt22" style="max-width:1000px">The same engine already governs <span class="accent">DevOps, identity, healthcare, support</span> — a deleted database or an admin-grant to an external account is caught exactly like a poisoned wire.</p>
+    <div class="cards c4 mt22">
+      <div class="card"><div class="t" style="font-size:15px">Audit trail</div></div>
+      <div class="card"><div class="t" style="font-size:15px">Compliance posture</div></div>
+      <div class="card"><div class="t" style="font-size:15px">Cross-vendor neutrality</div></div>
+      <div class="card"><div class="t" style="font-size:15px">Accumulated risk patterns</div></div>
+    </div>
+    <p class="small mt22" style="color:var(--w70)"><b style="color:#fff">Build vs buy:</b> a flag is a sprint. An audit-grade, cross-vendor control layer a regulator will accept is not — and it isn&apos;t the agent vendors&apos; core product.</p>
+  </div>
+  <div class="foot">TheFirst Spark Challenge</div>
+  <div class="pageno">09 / 10</div>
+</section>
+
+<!-- 10 · CLOSE / PROOF / ASK ----------------------------------------------- -->
+<section class="slide">
+  <div class="brand"><svg width="24" height="24" viewBox="0 0 40 40" fill="none"><path d="M20 3.5l13 4.2v9.3c0 8.2-5.4 14.6-13 17-7.6-2.4-13-8.8-13-17V7.7L20 3.5z" stroke="#8B7CF0" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 20.2l4.6 4.6L27 14.5" stroke="#8B7CF0" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm">Sentinel</span></div>
+  <div class="body" style="justify-content:center">
+    <p class="eyebrow">09 · Live today</p>
+    <h1 class="mt16" style="font-size:50px">Everyone&apos;s building the agent.<br/>We build the layer that makes it <span class="accent">deployable.</span></h1>
+    <div class="cards c3 mt40">
+      <div class="card glow"><div class="t accent" style="font-size:17px">Working engine</div><div class="d">Two-layer hybrid + live gpt-5.4 verdicts, deployed and running.</div></div>
+      <div class="card glow"><div class="t accent" style="font-size:17px">Provable, not claimed</div><div class="d">Watch it reason; edit a rule and the verdict changes, live.</div></div>
+      <div class="card glow"><div class="t accent" style="font-size:17px">Audit-ready</div><div class="d">Every decision hash-chained and exportable.</div></div>
+    </div>
+    <div class="mt40" style="display:flex;align-items:center;gap:14px">
+      <span class="chip accent"><span class="dot"></span> Try it live</span>
+      <span class="chip mono" style="font-size:16px">sentinel-sable-nu.vercel.app</span>
+    </div>
+  </div>
+  <div class="foot">TheFirst Spark Challenge · [Team name]</div>
+  <div class="pageno">10 / 10</div>
+</section>
+
+</body>
+</html>
