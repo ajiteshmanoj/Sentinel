@@ -135,6 +135,34 @@ export function LockIcon({ className }: IconProps) {
   );
 }
 
+export function HealthIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className ?? base}>
+      <path d="M12 20s-7-4.4-7-9.4A3.9 3.9 0 0 1 12 7a3.9 3.9 0 0 1 7 3.6C19 15.6 12 20 12 20z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M7.5 12h2l1-2.2 1.8 4 1-1.8h2.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function CartIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className ?? base}>
+      <path d="M3 4h2l2.4 10.5h9.2L19 7.5H6.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="9" cy="19" r="1.4" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="16.5" cy="19" r="1.4" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+export function SupportIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className ?? base}>
+      <path d="M4 12a8 8 0 1 1 4 6.9L4 20l1.1-3.9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 11h6M9 14h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function ChevronIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className ?? base}>

@@ -6,6 +6,7 @@ import { Hero } from "@/components/Hero";
 import { HowItWorks } from "@/components/HowItWorks";
 import { Navbar } from "@/components/Navbar";
 import { Positioning } from "@/components/Positioning";
+import { PossibilitiesExplorer } from "@/components/PossibilitiesExplorer";
 import { SetupNotice } from "@/components/SetupNotice";
 
 export default function Home() {
@@ -19,6 +20,7 @@ export default function Home() {
       <Console />
       <HowItWorks />
       <Positioning />
+      <PossibilitiesExplorer />
       <Footer />
     </main>
   );
