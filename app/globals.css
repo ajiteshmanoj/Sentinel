@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: #07070c;
+  /* Subtle vignette + top indigo halo for depth. */
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(108, 92, 231, 0.16), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(108, 92, 231, 0.08), transparent 55%);
+  background-attachment: fixed;
+}
+
+@layer base {
+  ::selection {
+    background: rgba(108, 92, 231, 0.4);
+  }
+
+  /* Headlines: tight tracking, premium feel. */
+  .headline {
+    @apply font-semibold tracking-[-0.03em];
+    text-wrap: balance;
+  }
+}
+
+@layer components {
+  /* Frosted card surface used throughout. */
+  .surface {
+    @apply rounded-2xl border border-white/[0.07] bg-white/[0.025] backdrop-blur-xl;
+  }
+
+  .surface-strong {
+    @apply rounded-2xl border border-white/10 bg-ink-700/70 backdrop-blur-2xl;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-white/10
+           bg-white/[0.04] px-3 py-1 text-xs font-medium text-white/70;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5
+           text-sm font-semibold transition-all duration-300
+           ease-[cubic-bezier(0.22,1,0.36,1)]
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/60;
+  }
+
+  .btn-primary {
+    @apply btn bg-indigo text-white shadow-glow hover:bg-indigo-soft
+           hover:shadow-[0_0_50px_-8px_rgba(108,92,231,0.7)] active:scale-[0.98];
+  }
+
+  .btn-ghost {
+    @apply btn border border-white/[0.12] bg-white/[0.03] text-white/80
+           hover:border-white/25 hover:bg-white/[0.06] active:scale-[0.98];
+  }
+
+  .label-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.22em] text-indigo-soft/80;
+  }
+}
+
+/* Thin, refined scrollbars. */
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* Reduced-motion: kill ambient + decorative motion, keep functional fades calm. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.12s !important;
+  }
+}
