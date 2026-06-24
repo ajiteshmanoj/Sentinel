@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { AmbientBackground } from "./AmbientBackground";
+import { GuidedDemoButton } from "./GuidedDemo";
 import { Logo } from "./Logo";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -77,12 +78,13 @@ export function Hero() {
           transition={{ duration: 0.9, ease: EASE, delay: 0.28 }}
           className="mt-10 flex flex-col items-center gap-4 sm:flex-row"
         >
-          <a href="#console" className="btn-primary text-base">
+          <GuidedDemoButton
+            className="btn-primary text-base"
+            label="Watch the 90-second guided demo"
+          />
+          <a href="#console" className="btn-ghost text-base">
             See it live
             <span aria-hidden>→</span>
-          </a>
-          <a href="#how" className="btn-ghost text-base">
-            How it works
           </a>
         </motion.div>
 

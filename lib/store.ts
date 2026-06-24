@@ -1,11 +1,17 @@
 // ────────────────────────────────────────────────────────────────────────────
 // Client-side console store. Drives the scripted feed, calls the LIVE engine
-// (/api/judge) for each action, holds verdicts, human decisions, and stats.
+// (/api/judge[/stream]) for each action, holds verdicts, human decisions, an
+// append-only audit log, and the guided-demo run mode.
 //
-// Two run modes:
+// Two protection modes:
 //  - Sentinel ON  → every action is judged live by the engine.
 //  - Sentinel OFF → the counterfactual: actions just execute. Dangerous ones
 //    (computed from the SAME deterministic rules) slip through — money gone.
+//
+// Two scenario sets:
+//  - full   → all 12 scripted actions (breadth).
+//  - guided → a curated 3-beat arc (allow → rule-block → AI-catch) for the
+//    self-running guided demo and the 3-minute video.
 // ────────────────────────────────────────────────────────────────────────────
 
 import { create } from "zustand";
@@ -15,9 +21,11 @@ import { DEFAULT_POLICY_RULES } from "./policy";
 import { SCENARIO } from "./scenarios";
 import type {
   AgentAction,
+  CaughtBy,
   GuardrailThresholds,
   JudgeResult,
   PolicyRule,
+  Verdict,
 } from "./engine/types";
 
 export type ItemStatus =
@@ -27,11 +35,14 @@ export type ItemStatus =
   | "error"
   | "executed"; // Sentinel-OFF outcome
 export type HumanDecision = "approved" | "edited" | "blocked" | null;
+export type ScenarioMode = "full" | "guided";
+
+/** The curated arc, in order: routine allow → rule-block → AI-catch. */
+const GUIDED_IDS = ["act-01", "act-03", "act-ai"];
 
 /** What happens to an action when Sentinel is OFF. */
 export interface OffOutcome {
   dangerous: boolean;
-  /** What Sentinel WOULD have done, for the "you needed this" callout. */
   wouldHaveBeen: "review" | "block" | null;
   label: string;
 }
@@ -47,6 +58,23 @@ export interface FeedItem {
   inReview: boolean;
 }
 
+/** An append-only audit-log record. Hashed into a chain at display time. */
+export interface AuditEntry {
+  seq: number;
+  ts: number;
+  actionId: string;
+  summary: string;
+  domain: string;
+  amount?: number;
+  kind: "verdict" | "human" | "unchecked";
+  verdict?: Verdict;
+  caughtBy?: CaughtBy;
+  riskScore?: number;
+  confidence?: number;
+  humanDecision?: HumanDecision;
+  detail?: string;
+}
+
 export type RunState = "idle" | "running" | "paused" | "done";
 
 interface ConsoleState {
@@ -54,19 +82,24 @@ interface ConsoleState {
   policyRules: PolicyRule[];
   thresholds: GuardrailThresholds;
   sentinelEnabled: boolean;
+  mode: ScenarioMode;
+  auditLog: AuditEntry[];
   runState: RunState;
   speedMs: number;
   activeReviewId: string | null;
-  /** id of the card currently spotlighted by a dramatic catch (dims siblings). */
   spotlightId: string | null;
   runToken: number;
+  /** Guided self-running demo overlay is active. */
+  guidedActive: boolean;
 
   // actions
+  setGuidedActive: (active: boolean) => void;
   runScenario: () => Promise<void>;
   pause: () => void;
   reset: () => void;
   setSpeed: (ms: number) => void;
   setSentinelEnabled: (on: boolean) => void;
+  setMode: (mode: ScenarioMode) => void;
   openReview: (id: string) => void;
   closeReview: () => void;
   decide: (id: string, decision: Exclude<HumanDecision, null>) => void;
@@ -78,8 +111,14 @@ interface ConsoleState {
   resetPolicy: () => void;
 }
 
-const freshItems = (): FeedItem[] =>
-  SCENARIO.map((action) => ({
+function sourceFor(mode: ScenarioMode): AgentAction[] {
+  return mode === "guided"
+    ? SCENARIO.filter((a) => GUIDED_IDS.includes(a.id))
+    : SCENARIO;
+}
+
+function freshItems(mode: ScenarioMode): FeedItem[] {
+  return sourceFor(mode).map((action) => ({
     action,
     status: "queued",
     result: null,
@@ -88,6 +127,7 @@ const freshItems = (): FeedItem[] =>
     humanDecision: null,
     inReview: false,
   }));
+}
 
 function delay(ms: number, token: number, getToken: () => number) {
   return new Promise<void>((resolve, reject) => {
@@ -112,11 +152,6 @@ async function judgeAction(
   return (await res.json()) as JudgeResult;
 }
 
-/**
- * Streaming judge: reads the SSE feed, forwarding narration tokens live and
- * returning the authoritative verdict. Throws if the stream errors so the caller
- * can fall back to the non-streaming endpoint.
- */
 async function judgeActionStream(
   action: AgentAction,
   policyRules: PolicyRule[],
@@ -168,7 +203,7 @@ function computeOffOutcome(
   const hits = evaluateGuardrails(action, thresholds);
   const wouldHaveBeen = worstGuardrailVerdict(hits);
   const dangerous = wouldHaveBeen !== null && !action.reversible;
-  const reallyDangerous = wouldHaveBeen !== null; // any escalation-worthy action
+  const reallyDangerous = wouldHaveBeen !== null;
   return {
     dangerous: reallyDangerous,
     wouldHaveBeen,
@@ -180,16 +215,23 @@ function computeOffOutcome(
   };
 }
 
+const now = () => Date.now();
+
 export const useConsole = create<ConsoleState>((set, get) => ({
-  items: freshItems(),
+  items: freshItems("full"),
   policyRules: DEFAULT_POLICY_RULES.map((r) => ({ ...r })),
   thresholds: { ...DEFAULT_THRESHOLDS },
   sentinelEnabled: true,
+  mode: "full",
+  auditLog: [],
   runState: "idle",
   speedMs: 1100,
   activeReviewId: null,
   spotlightId: null,
   runToken: 0,
+  guidedActive: false,
+
+  setGuidedActive: (active) => set({ guidedActive: active }),
 
   runScenario: async () => {
     const state = get();
@@ -200,7 +242,8 @@ export const useConsole = create<ConsoleState>((set, get) => ({
     set({
       runToken: token,
       runState: "running",
-      items: startFresh ? freshItems() : state.items,
+      items: startFresh ? freshItems(state.mode) : state.items,
+      auditLog: startFresh ? [] : state.auditLog,
       activeReviewId: startFresh ? null : state.activeReviewId,
       spotlightId: null,
     });
@@ -215,14 +258,12 @@ export const useConsole = create<ConsoleState>((set, get) => ({
       const action = cur.action;
       const sentinelOn = get().sentinelEnabled;
 
-      // Mark assessing / executing (reset any prior streamed narration).
       set((s) => ({
         items: s.items.map((it, idx) =>
           idx === i ? { ...it, status: "assessing", streamedReasoning: "" } : it,
         ),
       }));
 
-      // Minimum dwell so the "assessing"/"executing" beat is visible.
       const dwell = delay(
         Math.max(650, get().speedMs * 0.8),
         token,
@@ -251,7 +292,6 @@ export const useConsole = create<ConsoleState>((set, get) => ({
             onToken,
           );
         } catch {
-          // Streaming failed — fall back to the rock-solid non-streaming engine.
           try {
             result = await judgeAction(
               action,
@@ -265,27 +305,46 @@ export const useConsole = create<ConsoleState>((set, get) => ({
         await dwell;
         if (isCancelled()) return;
 
-        set((s) => ({
-          items: s.items.map((it, idx) =>
-            idx === i
-              ? {
-                  ...it,
-                  status: errored ? "error" : "resolved",
-                  result,
-                  inReview: result ? result.escalated : false,
-                }
-              : it,
-          ),
-          activeReviewId:
-            result && result.escalated && !s.activeReviewId
-              ? action.id
-              : s.activeReviewId,
-          // Spotlight a block (dims the rest of the feed for a beat).
-          spotlightId:
-            result && result.verdict === "block" ? action.id : s.spotlightId,
-        }));
+        set((s) => {
+          const entry: AuditEntry | null = result
+            ? {
+                seq: s.auditLog.length + 1,
+                ts: now(),
+                actionId: action.id,
+                summary: action.summary,
+                domain: action.domain,
+                amount:
+                  typeof action.payload.monetaryValue === "number"
+                    ? action.payload.monetaryValue
+                    : undefined,
+                kind: "verdict",
+                verdict: result.verdict,
+                caughtBy: result.caughtBy,
+                riskScore: result.riskScore,
+                confidence: result.confidence,
+              }
+            : null;
+          return {
+            items: s.items.map((it, idx) =>
+              idx === i
+                ? {
+                    ...it,
+                    status: errored ? "error" : "resolved",
+                    result,
+                    inReview: result ? result.escalated : false,
+                  }
+                : it,
+            ),
+            auditLog: entry ? [...s.auditLog, entry] : s.auditLog,
+            activeReviewId:
+              result && result.escalated && !s.activeReviewId
+                ? action.id
+                : s.activeReviewId,
+            spotlightId:
+              result && result.verdict === "block" ? action.id : s.spotlightId,
+          };
+        });
 
-        // Hold the dramatic catch, then clear the spotlight.
         if (result && result.verdict === "block") {
           const hold = action.headline ? 1700 : 1100;
           delay(hold, token, () => get().runToken)
@@ -303,14 +362,31 @@ export const useConsole = create<ConsoleState>((set, get) => ({
         const offOutcome = computeOffOutcome(action, get().thresholds);
         set((s) => ({
           items: s.items.map((it, idx) =>
-            idx === i
-              ? { ...it, status: "executed", offOutcome }
-              : it,
+            idx === i ? { ...it, status: "executed", offOutcome } : it,
           ),
+          auditLog: [
+            ...s.auditLog,
+            {
+              seq: s.auditLog.length + 1,
+              ts: now(),
+              actionId: action.id,
+              summary: action.summary,
+              domain: action.domain,
+              amount:
+                typeof action.payload.monetaryValue === "number"
+                  ? action.payload.monetaryValue
+                  : undefined,
+              kind: "unchecked",
+              detail: offOutcome.dangerous
+                ? `Executed with NO review — Sentinel would have ${
+                    offOutcome.wouldHaveBeen === "block" ? "blocked" : "held"
+                  } it`
+                : "Executed with no review (Sentinel off)",
+            },
+          ],
         }));
       }
 
-      // Pause between actions; headline catches get a longer beat.
       const extra =
         sentinelOn &&
         get().items[i].result?.verdict === "block" &&
@@ -330,39 +406,67 @@ export const useConsole = create<ConsoleState>((set, get) => ({
   pause: () => set({ runState: "paused", runToken: get().runToken + 1 }),
 
   reset: () =>
-    set({
-      items: freshItems(),
+    set((s) => ({
+      items: freshItems(s.mode),
+      auditLog: [],
       runState: "idle",
       activeReviewId: null,
       spotlightId: null,
-      runToken: get().runToken + 1,
-    }),
+      runToken: s.runToken + 1,
+    })),
 
   setSpeed: (ms) => set({ speedMs: ms }),
 
   setSentinelEnabled: (on) =>
-    set({
+    set((s) => ({
       sentinelEnabled: on,
-      // Toggling the protection resets the feed so the contrast is clean.
-      items: freshItems(),
+      items: freshItems(s.mode),
+      auditLog: [],
       runState: "idle",
       activeReviewId: null,
       spotlightId: null,
-      runToken: get().runToken + 1,
-    }),
+      runToken: s.runToken + 1,
+    })),
+
+  setMode: (mode) =>
+    set((s) => ({
+      mode,
+      items: freshItems(mode),
+      auditLog: [],
+      runState: "idle",
+      activeReviewId: null,
+      spotlightId: null,
+      runToken: s.runToken + 1,
+    })),
 
   openReview: (id) => set({ activeReviewId: id }),
   closeReview: () => set({ activeReviewId: null }),
 
   decide: (id, decision) =>
-    set((s) => ({
-      items: s.items.map((it) =>
-        it.action.id === id
-          ? { ...it, humanDecision: decision, inReview: false }
-          : it,
-      ),
-      activeReviewId: s.activeReviewId === id ? null : s.activeReviewId,
-    })),
+    set((s) => {
+      const item = s.items.find((it) => it.action.id === id);
+      const entry: AuditEntry | null = item
+        ? {
+            seq: s.auditLog.length + 1,
+            ts: now(),
+            actionId: id,
+            summary: item.action.summary,
+            domain: item.action.domain,
+            kind: "human",
+            humanDecision: decision,
+            detail: `Reviewer ${decision} this action`,
+          }
+        : null;
+      return {
+        items: s.items.map((it) =>
+          it.action.id === id
+            ? { ...it, humanDecision: decision, inReview: false }
+            : it,
+        ),
+        auditLog: entry ? [...s.auditLog, entry] : s.auditLog,
+        activeReviewId: s.activeReviewId === id ? null : s.activeReviewId,
+      };
+    }),
 
   updatePolicyRule: (id, text) =>
     set((s) => ({
@@ -411,7 +515,6 @@ export interface ConsoleStats {
   autoApproved: number;
   escalated: number;
   blocked: number;
-  /** Sentinel-OFF: count + value of dangerous actions that slipped through. */
   slippedThrough: number;
   total: number;
 }

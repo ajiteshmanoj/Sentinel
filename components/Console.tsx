@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { selectStats, useConsole } from "@/lib/store";
 import { ActionCard } from "./ActionCard";
+import { AuditTrail } from "./AuditTrail";
+import { GuidedDemoButton } from "./GuidedDemo";
 import { PolicyPanel } from "./PolicyPanel";
 import { ReviewPanel } from "./ReviewPanel";
 import { StatsStrip } from "./StatsStrip";
@@ -99,7 +101,7 @@ export function Console() {
 
   return (
     <section id="console" className="relative mx-auto max-w-6xl px-6 py-24 md:py-32">
-      <Reveal className="mb-10 text-center">
+      <Reveal className="mb-8 text-center">
         <p className="label-eyebrow mb-3">The live console</p>
         <h2 className="headline text-4xl text-white md:text-5xl">
           Watch a poisoned wire get frozen.
@@ -111,6 +113,12 @@ export function Console() {
           the fraud a rulebook never could. Edit any rule and re-run; nothing
           here is hardcoded.
         </p>
+        <div className="mt-6">
+          <GuidedDemoButton
+            className="btn-primary text-base"
+            label="Watch the 90-second guided demo"
+          />
+        </div>
       </Reveal>
 
       {/* Sentinel on/off + run controls */}
@@ -195,6 +203,11 @@ export function Console() {
             />
           ))}
         </AnimatePresence>
+      </div>
+
+      {/* Audit trail — the A-1 "audit trails" pillar, made visible */}
+      <div id="audit" className="mt-8 scroll-mt-24">
+        <AuditTrail />
       </div>
 
       {/* Done CTA when Sentinel was off */}
