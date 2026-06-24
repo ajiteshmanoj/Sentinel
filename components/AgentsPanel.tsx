@@ -12,6 +12,8 @@ const COLORS: Record<string, string> = {
   "treasury-agent": "#8B7CF0",
   "payroll-agent": "#F5A623",
   "insights-agent": "#4B9FE7",
+  "ops-agent": "#E7864B",
+  "it-agent": "#4BD0E7",
 };
 
 function monogram(name: string): string {

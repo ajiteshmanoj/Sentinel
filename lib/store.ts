@@ -238,11 +238,16 @@ function computeOffOutcome(
     : worstGuardrailVerdict(hits);
   const dangerous = wouldHaveBeen !== null && (!action.reversible || outOfScope);
   const reallyDangerous = wouldHaveBeen !== null;
+  const moneyDomain = ["payments", "treasury", "refunds", "payroll"].includes(
+    action.domain,
+  );
   return {
     dangerous: reallyDangerous,
     wouldHaveBeen,
     label: dangerous
-      ? "Executed · irreversible · money gone"
+      ? moneyDomain
+        ? "Executed · irreversible · money gone"
+        : "Executed · irreversible · damage done"
       : reallyDangerous
         ? "Executed without review"
         : "Executed",

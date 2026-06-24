@@ -85,6 +85,16 @@ export function Console() {
     () => items.find((it) => it.action.id === activeReviewId) ?? null,
     [items, activeReviewId],
   );
+  // Where the finance set ends and the cross-domain "any agent" set begins.
+  const firstCrossDomainIdx = useMemo(
+    () =>
+      items.findIndex(
+        (it) =>
+          it.action.domain === "infrastructure" ||
+          it.action.domain === "access",
+      ),
+    [items],
+  );
 
   const running = runState === "running";
   const done = runState === "done";
@@ -109,11 +119,11 @@ export function Console() {
           Watch a poisoned wire get frozen.
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-white/60">
-          A scripted agent fires real money-movement actions. Watch{" "}
-          <span className="text-white/90">gpt-5.4 reason in real time</span> on
-          each one — the deterministic rules catch the obvious, the model catches
-          the fraud a rulebook never could. Edit any rule and re-run; nothing
-          here is hardcoded.
+          Scripted agents fire real actions —{" "}
+          <span className="text-white/90">money movement first</span>, then
+          infrastructure and access. Watch gpt-5.4 reason on each; the same
+          identity → scope → policy → risk pipeline governs them all. Nothing here
+          is hardcoded.
         </p>
         <div className="mt-6">
           <GuidedDemoButton
@@ -201,17 +211,37 @@ export function Console() {
       {/* Feed */}
       <div className="space-y-3">
         <AnimatePresence initial={false}>
-          {items.map((item, i) => (
-            <ActionCard
-              key={item.action.id}
-              item={item}
-              index={i}
-              paused={runState === "paused"}
-              dimmed={spotlightId !== null && spotlightId !== item.action.id}
-              autoScroll={mode === "guided" && runState === "running"}
-              onOpenReview={openReview}
-            />
-          ))}
+          {items.flatMap((item, i) => {
+            const card = (
+              <ActionCard
+                key={item.action.id}
+                item={item}
+                index={i}
+                paused={runState === "paused"}
+                dimmed={spotlightId !== null && spotlightId !== item.action.id}
+                autoScroll={mode === "guided" && runState === "running"}
+                onOpenReview={openReview}
+              />
+            );
+            return i === firstCrossDomainIdx
+              ? [
+                  <motion.div
+                    key="beyond-finance"
+                    layout
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex items-center gap-4 py-4"
+                  >
+                    <span className="h-px flex-1 bg-gradient-to-r from-transparent to-white/15" />
+                    <span className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-white/40">
+                      Beyond finance · same engine, any agent
+                    </span>
+                    <span className="h-px flex-1 bg-gradient-to-l from-transparent to-white/15" />
+                  </motion.div>,
+                  card,
+                ]
+              : [card];
+          })}
         </AnimatePresence>
       </div>
 

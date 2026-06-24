@@ -63,6 +63,26 @@ export function MarketingIcon({ className }: IconProps) {
   );
 }
 
+export function InfraIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className ?? base}>
+      <rect x="3.5" y="4" width="17" height="5" rx="1.6" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="3.5" y="11" width="17" height="5" rx="1.6" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M7 6.5h.01M7 13.5h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M9 19h6M12 16v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function AccessIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className ?? base}>
+      <circle cx="8" cy="10" r="3.4" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10.6 11.4l7.4 7.4M16 17l2-2M18.4 14.6l1.6 1.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function DomainIcon({
   domain,
   className,
@@ -83,6 +103,10 @@ export function DomainIcon({
       return <DataIcon className={className} />;
     case "marketing":
       return <MarketingIcon className={className} />;
+    case "infrastructure":
+      return <InfraIcon className={className} />;
+    case "access":
+      return <AccessIcon className={className} />;
   }
 }
 

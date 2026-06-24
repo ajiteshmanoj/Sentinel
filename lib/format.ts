@@ -44,6 +44,8 @@ export const DOMAIN_LABEL: Record<ActionDomain, string> = {
   payroll: "Payroll",
   data: "Data",
   marketing: "Marketing",
+  infrastructure: "Infrastructure",
+  access: "Access",
 };
 
 export interface VerdictTheme {

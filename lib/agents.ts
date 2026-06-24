@@ -84,4 +84,34 @@ export const DEFAULT_AGENTS: AgentIdentity[] = [
       },
     ],
   },
+
+  // ── Beyond finance: the same model governs non-money agents too ──────────
+  {
+    id: "ops-agent",
+    name: "Ops Agent",
+    role: "DevOps & infrastructure",
+    revoked: false,
+    capabilities: [
+      {
+        id: "cap-ops",
+        label: "Deploy & read-only ops (no destructive changes)",
+        domains: ["infrastructure"],
+        types: ["deploy", "read", "restart", "scale", "rollback"],
+      },
+    ],
+  },
+  {
+    id: "it-agent",
+    name: "IT Agent",
+    role: "Identity & access",
+    revoked: false,
+    capabilities: [
+      {
+        id: "cap-it",
+        label: "Provision standard roles (no admin grants)",
+        domains: ["access"],
+        types: ["reset", "provision_standard", "disable", "unlock"],
+      },
+    ],
+  },
 ];

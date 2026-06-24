@@ -12,7 +12,9 @@ export type ActionDomain =
   | "refunds"
   | "payroll"
   | "data"
-  | "marketing";
+  | "marketing"
+  | "infrastructure"
+  | "access";
 
 /**
  * A single proposed agent action. The action TEXT is scripted (authored in
