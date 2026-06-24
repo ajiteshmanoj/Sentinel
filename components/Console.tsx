@@ -118,7 +118,7 @@ export function Console() {
         <div className="mt-6">
           <GuidedDemoButton
             className="btn-primary text-base"
-            label="Watch the 90-second guided demo"
+            label="Watch the guided demo"
           />
         </div>
       </Reveal>
@@ -188,7 +188,9 @@ export function Console() {
 
       {/* Agents (identity + least-privilege capabilities + revocation) */}
       <Reveal delay={0.12} className="mb-6">
-        <AgentsPanel />
+        <div id="agents" className="scroll-mt-24">
+          <AgentsPanel />
+        </div>
       </Reveal>
 
       {/* Policy (the live-proof beat) */}

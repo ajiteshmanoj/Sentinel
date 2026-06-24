@@ -14,11 +14,14 @@ type Step =
   | { kind: "scroll"; to: string }
   | { kind: "mode"; guided: boolean }
   | { kind: "sentinel"; on: boolean }
+  | { kind: "revoke"; agentId: string; revoked: boolean }
+  | { kind: "resetAgents" }
   | { kind: "run" };
 
 const STEPS: Step[] = [
   { kind: "scroll", to: "console" },
   { kind: "mode", guided: true },
+  { kind: "resetAgents" },
   {
     kind: "caption",
     text: "Hi — I'm Sentinel. I sit between your AI agents and the actions they take, so they can move money without anyone losing sleep. Let me show you.",
@@ -48,11 +51,30 @@ const STEPS: Step[] = [
     text: "The $25,000 wire hit a hard rule, so I froze it. But the $9,800 passed every rule — I caught that one myself. That's what a rulebook can't do.",
     ms: 6800,
   },
+  // Revocation beat — each agent has only the permissions it needs, and I can cut one off instantly.
+  { kind: "scroll", to: "agents" },
+  {
+    kind: "caption",
+    text: "It's not just risk — it's permission. Each of these agents is granted only what it needs. And if one is compromised, I can cut it off instantly. Watch — I'll revoke the Payments Agent.",
+    ms: 6600,
+  },
+  { kind: "revoke", agentId: "payments-agent", revoked: true },
+  {
+    kind: "caption",
+    text: "Done — its access is gone. Now I'll let the same payments try to run again.",
+    ms: 4200,
+  },
+  { kind: "run" },
+  {
+    kind: "caption",
+    text: "Denied on sight. No risk check, no model call — the Payments Agent simply isn't permitted anymore. That's precise, instant revocation.",
+    ms: 6400,
+  },
   { kind: "scroll", to: "audit" },
   {
     kind: "caption",
-    text: "And every decision I make is logged — tamper-evident, hash-chained, exportable. Audit-ready for a regulator.",
-    ms: 5400,
+    text: "And every decision — approved, frozen, or revoked — is logged: tamper-evident, hash-chained, exportable. Audit-ready for a regulator.",
+    ms: 5600,
   },
   {
     kind: "caption",
@@ -146,6 +168,7 @@ export function GuidedDemo() {
     const finish = () => {
       const api = useConsole.getState();
       api.setSpeed(1100);
+      api.resetAgents();
       api.setMode("full");
       api.setGuidedActive(false);
     };
@@ -168,6 +191,14 @@ export function GuidedDemo() {
           case "sentinel":
             api().setSentinelEnabled(step.on);
             await wait(500);
+            break;
+          case "revoke":
+            api().setAgentRevoked(step.agentId, step.revoked);
+            await wait(700);
+            break;
+          case "resetAgents":
+            api().resetAgents();
+            await wait(200);
             break;
           case "run":
             await api().runScenario();
@@ -193,6 +224,7 @@ export function GuidedDemo() {
     const api = useConsole.getState();
     api.setSpeed(1100);
     api.pause();
+    api.resetAgents();
     api.setMode("full");
     setActive(false);
   };

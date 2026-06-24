@@ -113,7 +113,16 @@ interface ConsoleState {
   removePolicyRule: (id: string) => void;
   setThreshold: (key: keyof GuardrailThresholds, value: number) => void;
   toggleAgentRevoked: (id: string) => void;
+  setAgentRevoked: (id: string, revoked: boolean) => void;
+  resetAgents: () => void;
   resetPolicy: () => void;
+}
+
+function defaultAgents(): AgentIdentity[] {
+  return DEFAULT_AGENTS.map((a) => ({
+    ...a,
+    capabilities: a.capabilities.map((c) => ({ ...c })),
+  }));
 }
 
 function agentFor(
@@ -246,10 +255,7 @@ export const useConsole = create<ConsoleState>((set, get) => ({
   items: freshItems("full"),
   policyRules: DEFAULT_POLICY_RULES.map((r) => ({ ...r })),
   thresholds: { ...DEFAULT_THRESHOLDS },
-  agents: DEFAULT_AGENTS.map((a) => ({
-    ...a,
-    capabilities: a.capabilities.map((c) => ({ ...c })),
-  })),
+  agents: defaultAgents(),
   sentinelEnabled: true,
   mode: "full",
   auditLog: [],
@@ -554,6 +560,13 @@ export const useConsole = create<ConsoleState>((set, get) => ({
         a.id === id ? { ...a, revoked: !a.revoked } : a,
       ),
     })),
+
+  setAgentRevoked: (id, revoked) =>
+    set((s) => ({
+      agents: s.agents.map((a) => (a.id === id ? { ...a, revoked } : a)),
+    })),
+
+  resetAgents: () => set({ agents: defaultAgents() }),
 
   resetPolicy: () =>
     set({

@@ -65,7 +65,7 @@ export function Hero() {
         >
           <GuidedDemoButton
             className="btn-primary text-base"
-            label="Watch the 90-second guided demo"
+            label="Watch the guided demo"
           />
           <a href="#console" className="btn-ghost text-base">
             See it live
