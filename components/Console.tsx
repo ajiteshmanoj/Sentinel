@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { selectStats, useConsole } from "@/lib/store";
 import { ActionCard } from "./ActionCard";
+import { AgentsPanel } from "./AgentsPanel";
 import { AuditTrail } from "./AuditTrail";
 import { GuidedDemoButton } from "./GuidedDemo";
 import { PolicyPanel } from "./PolicyPanel";
@@ -185,8 +186,13 @@ export function Console() {
         <StatsStrip stats={stats} sentinelOff={!sentinelOn} />
       </Reveal>
 
-      {/* Policy (the live-proof beat) */}
+      {/* Agents (identity + least-privilege capabilities + revocation) */}
       <Reveal delay={0.12} className="mb-6">
+        <AgentsPanel />
+      </Reveal>
+
+      {/* Policy (the live-proof beat) */}
+      <Reveal delay={0.14} className="mb-6">
         <PolicyPanel />
       </Reveal>
 

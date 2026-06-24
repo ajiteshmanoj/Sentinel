@@ -2,7 +2,8 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
-import type { FeedItem } from "@/lib/store";
+import { findAgent, useConsole, type FeedItem } from "@/lib/store";
+import { checkScope } from "@/lib/engine/scope";
 import { DOMAIN_LABEL, VERDICT_THEME, capitalizeFirst, formatMoney } from "@/lib/format";
 import { DomainIcon, LockIcon, ShieldIcon } from "./icons";
 import { RiskGauge } from "./RiskGauge";
@@ -28,8 +29,10 @@ export function ReviewPanel({
     return () => window.removeEventListener("keydown", onKey);
   }, [item, onClose]);
 
+  const agents = useConsole((s) => s.agents);
   const result = item?.result ?? null;
   const action = item?.action ?? null;
+  const agent = findAgent(agents, action?.agentId);
   const theme = result ? VERDICT_THEME[result.verdict] : null;
   const aiCaught =
     !!result &&
@@ -121,6 +124,40 @@ export function ReviewPanel({
                   </h3>
                 </div>
               </div>
+
+              {/* Delegation chain + the acting agent's grant */}
+              {agent && action && (
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                  <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-white/40">
+                    Delegation chain
+                  </p>
+                  <div className="flex flex-wrap items-center gap-1.5 text-sm">
+                    <span className="rounded-md bg-white/[0.05] px-2 py-0.5 text-white/70">
+                      User
+                    </span>
+                    <span className="text-white/30">→</span>
+                    <span className="rounded-md border border-indigo/25 bg-indigo/10 px-2 py-0.5 text-indigo-soft">
+                      {agent.name}
+                    </span>
+                    <span className="text-white/30">→</span>
+                    <span className="rounded-md bg-white/[0.05] px-2 py-0.5 font-mono text-xs text-white/70">
+                      {action.type}
+                    </span>
+                  </div>
+                  {(() => {
+                    const scope = checkScope(agent, action);
+                    return (
+                      <p
+                        className={`mt-2.5 text-xs leading-relaxed ${
+                          scope.allowed ? "text-white/50" : "text-sentinel-red/90"
+                        }`}
+                      >
+                        {scope.detail}
+                      </p>
+                    );
+                  })()}
+                </div>
+              )}
 
               {/* AI hero badge — rules clear, the model caught it */}
               {aiCaught && (

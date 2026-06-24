@@ -41,6 +41,36 @@ export interface AgentAction {
   reversible: boolean;
   /** Marks the centerpiece "money moment" actions for extra demo drama. */
   headline?: boolean;
+  /** Which agent identity proposed this action (delegation chain). */
+  agentId?: string;
+}
+
+/**
+ * A capability-scoped, least-privilege grant (Auth0 model): the specific,
+ * bounded thing an agent is permitted to do — not a broad resource scope.
+ */
+export interface Capability {
+  id: string;
+  /** Human-readable grant, e.g. "Issue refunds up to $100". */
+  label: string;
+  /** Domains this capability covers. */
+  domains: ActionDomain[];
+  /** Optional action-type substrings this capability is limited to. */
+  types?: string[];
+  /** Monetary ceiling in USD; undefined = no monetary limit. */
+  maxAmount?: number;
+  /** Within scope, but still always route to a human. */
+  requiresApproval?: boolean;
+}
+
+/** An autonomous agent identity with its granted capabilities. */
+export interface AgentIdentity {
+  id: string;
+  name: string;
+  role: string;
+  capabilities: Capability[];
+  /** Fast, precise revocation — a revoked agent's actions are denied instantly. */
+  revoked: boolean;
 }
 
 /** An organisation policy rule, editable in the UI. */
@@ -82,6 +112,8 @@ export interface AdjudicatorOutput {
 
 /** Which layer is responsible for the final escalation. */
 export type CaughtBy =
+  | "capability scope"
+  | "revoked agent"
   | "policy guardrail"
   | "risk model"
   | "risk model (low confidence)"

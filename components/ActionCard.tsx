@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import type { FeedItem } from "@/lib/store";
+import { findAgent, useConsole, type FeedItem } from "@/lib/store";
 import type { AgentAction } from "@/lib/engine/types";
 import {
   DOMAIN_LABEL,
@@ -134,6 +134,15 @@ export function ActionCard({
     result.escalated &&
     result.modelInvoked &&
     result.guardrailHits.length === 0;
+
+  // Acting agent (delegation chain) + scope-violation catch (Layer 0).
+  const agents = useConsole((s) => s.agents);
+  const agent = findAgent(agents, action.agentId);
+  const scopeCaught =
+    result?.caughtBy === "capability scope" ||
+    result?.caughtBy === "revoked agent";
+  const deterministicCatch =
+    result?.caughtBy === "policy guardrail" || scopeCaught;
 
   // During the guided demo, keep the card being judged centered in view so the
   // viewer always sees the action (and the catch) instead of an empty scroll.
@@ -286,10 +295,17 @@ export function ActionCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="mb-1 flex items-center gap-2">
+              <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="chip h-5 px-2 py-0 text-[0.65rem]">
                   {DOMAIN_LABEL[action.domain]}
                 </span>
+                {agent && (
+                  <span className="inline-flex items-center gap-1 text-[0.65rem] font-medium text-white/45">
+                    <span className="text-white/30">·</span> User
+                    <span className="text-white/25">→</span>
+                    <span className="text-white/65">{agent.name}</span>
+                  </span>
+                )}
                 {!action.reversible && (
                   <span className="inline-flex items-center gap-1 text-[0.65rem] font-medium text-white/40">
                     <LockIcon className="h-3 w-3" /> irreversible
@@ -394,11 +410,38 @@ export function ActionCard({
                 </div>
               )}
 
+              {/* Scope / revocation catch (Layer 0) */}
+              {scopeCaught && (
+                <div className="flex items-center gap-2.5 rounded-xl border border-sentinel-red/45 bg-sentinel-red/[0.09] px-3.5 py-2.5">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-sentinel-red/15 text-sentinel-red">
+                    <LockIcon className="h-4 w-4" />
+                  </span>
+                  <p className="text-sm text-white/85">
+                    {result.caughtBy === "revoked agent" ? (
+                      <>
+                        <span className="font-semibold text-sentinel-red">
+                          Agent access revoked.
+                        </span>{" "}
+                        Denied instantly — no risk assessment needed.
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-sentinel-red">
+                          Privilege escalation.
+                        </span>{" "}
+                        {agent?.name} isn&apos;t granted this — blocked before the
+                        risk model was even called.
+                      </>
+                    )}
+                  </p>
+                </div>
+              )}
+
               {result.caughtBy && (
                 <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[0.7rem] font-medium ${
-                      result.caughtBy.startsWith("policy")
+                      deterministicCatch
                         ? "border-indigo/40 bg-indigo/10 text-indigo-soft"
                         : "border-review/40 bg-review/10 text-review"
                     }`}

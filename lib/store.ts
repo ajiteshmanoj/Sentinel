@@ -15,12 +15,15 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 import { create } from "zustand";
+import { DEFAULT_AGENTS } from "./agents";
 import { DEFAULT_THRESHOLDS } from "./engine/config";
 import { evaluateGuardrails, worstGuardrailVerdict } from "./engine/guardrails";
+import { checkScope, scopeBlockResult } from "./engine/scope";
 import { DEFAULT_POLICY_RULES } from "./policy";
 import { SCENARIO } from "./scenarios";
 import type {
   AgentAction,
+  AgentIdentity,
   CaughtBy,
   GuardrailThresholds,
   JudgeResult,
@@ -81,6 +84,7 @@ interface ConsoleState {
   items: FeedItem[];
   policyRules: PolicyRule[];
   thresholds: GuardrailThresholds;
+  agents: AgentIdentity[];
   sentinelEnabled: boolean;
   mode: ScenarioMode;
   auditLog: AuditEntry[];
@@ -108,7 +112,23 @@ interface ConsoleState {
   addPolicyRule: () => void;
   removePolicyRule: (id: string) => void;
   setThreshold: (key: keyof GuardrailThresholds, value: number) => void;
+  toggleAgentRevoked: (id: string) => void;
   resetPolicy: () => void;
+}
+
+function agentFor(
+  agents: AgentIdentity[],
+  action: AgentAction,
+): AgentIdentity | undefined {
+  return agents.find((a) => a.id === action.agentId);
+}
+
+/** Find an agent by id (used by the feed cards and review panel). */
+export function findAgent(
+  agents: AgentIdentity[],
+  agentId?: string,
+): AgentIdentity | undefined {
+  return agents.find((a) => a.id === agentId);
 }
 
 function sourceFor(mode: ScenarioMode): AgentAction[] {
@@ -199,10 +219,15 @@ async function judgeActionStream(
 function computeOffOutcome(
   action: AgentAction,
   thresholds: GuardrailThresholds,
+  agent: AgentIdentity | undefined,
 ): OffOutcome {
   const hits = evaluateGuardrails(action, thresholds);
-  const wouldHaveBeen = worstGuardrailVerdict(hits);
-  const dangerous = wouldHaveBeen !== null && !action.reversible;
+  const scope = agent ? checkScope(agent, action) : null;
+  const outOfScope = scope !== null && !scope.allowed;
+  const wouldHaveBeen: "review" | "block" | null = outOfScope
+    ? "block"
+    : worstGuardrailVerdict(hits);
+  const dangerous = wouldHaveBeen !== null && (!action.reversible || outOfScope);
   const reallyDangerous = wouldHaveBeen !== null;
   return {
     dangerous: reallyDangerous,
@@ -221,6 +246,10 @@ export const useConsole = create<ConsoleState>((set, get) => ({
   items: freshItems("full"),
   policyRules: DEFAULT_POLICY_RULES.map((r) => ({ ...r })),
   thresholds: { ...DEFAULT_THRESHOLDS },
+  agents: DEFAULT_AGENTS.map((a) => ({
+    ...a,
+    capabilities: a.capabilities.map((c) => ({ ...c })),
+  })),
   sentinelEnabled: true,
   mode: "full",
   auditLog: [],
@@ -271,38 +300,49 @@ export const useConsole = create<ConsoleState>((set, get) => ({
       ).catch(() => undefined);
 
       if (sentinelOn) {
-        // ── Sentinel ON: live engine (streamed, with fallback) ────────────
+        // ── Sentinel ON: scope check (Layer 0) → live engine ──────────────
         let result: JudgeResult | null = null;
         let errored = false;
-        const onToken = (text: string) => {
-          if (isCancelled()) return;
-          set((s) => ({
-            items: s.items.map((it, idx) =>
-              idx === i
-                ? { ...it, streamedReasoning: it.streamedReasoning + text }
-                : it,
-            ),
-          }));
-        };
-        try {
-          result = await judgeActionStream(
-            action,
-            get().policyRules,
-            get().thresholds,
-            onToken,
-          );
-        } catch {
+
+        // Layer 0: the runtime enforces the agent's grant BEFORE any model call.
+        const agent = agentFor(get().agents, action);
+        const scope = agent ? checkScope(agent, action) : null;
+
+        if (scope && !scope.allowed) {
+          // Privilege escalation / revoked — denied on sight, no model needed.
+          result = scopeBlockResult(action, agent!, scope, Date.now());
+          await dwell;
+        } else {
+          const onToken = (text: string) => {
+            if (isCancelled()) return;
+            set((s) => ({
+              items: s.items.map((it, idx) =>
+                idx === i
+                  ? { ...it, streamedReasoning: it.streamedReasoning + text }
+                  : it,
+              ),
+            }));
+          };
           try {
-            result = await judgeAction(
+            result = await judgeActionStream(
               action,
               get().policyRules,
               get().thresholds,
+              onToken,
             );
           } catch {
-            errored = true;
+            try {
+              result = await judgeAction(
+                action,
+                get().policyRules,
+                get().thresholds,
+              );
+            } catch {
+              errored = true;
+            }
           }
+          await dwell;
         }
-        await dwell;
         if (isCancelled()) return;
 
         set((s) => {
@@ -361,7 +401,11 @@ export const useConsole = create<ConsoleState>((set, get) => ({
         // ── Sentinel OFF: the counterfactual ──────────────────────────────
         await dwell;
         if (isCancelled()) return;
-        const offOutcome = computeOffOutcome(action, get().thresholds);
+        const offOutcome = computeOffOutcome(
+          action,
+          get().thresholds,
+          agentFor(get().agents, action),
+        );
         set((s) => ({
           items: s.items.map((it, idx) =>
             idx === i ? { ...it, status: "executed", offOutcome } : it,
@@ -502,6 +546,13 @@ export const useConsole = create<ConsoleState>((set, get) => ({
   setThreshold: (key, value) =>
     set((s) => ({
       thresholds: { ...s.thresholds, [key]: value },
+    })),
+
+  toggleAgentRevoked: (id) =>
+    set((s) => ({
+      agents: s.agents.map((a) =>
+        a.id === id ? { ...a, revoked: !a.revoked } : a,
+      ),
     })),
 
   resetPolicy: () =>
