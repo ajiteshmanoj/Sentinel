@@ -336,8 +336,10 @@ export const useConsole = create<ConsoleState>((set, get) => ({
                 : it,
             ),
             auditLog: entry ? [...s.auditLog, entry] : s.auditLog,
+            // Auto-open the review panel on the first catch — but not during the
+            // guided demo, where a modal would cover the feed and the AI-catch.
             activeReviewId:
-              result && result.escalated && !s.activeReviewId
+              s.mode !== "guided" && result && result.escalated && !s.activeReviewId
                 ? action.id
                 : s.activeReviewId,
             spotlightId:
