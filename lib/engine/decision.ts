@@ -9,8 +9,10 @@ import "server-only";
 import { adjudicate, hasApiKey } from "./adjudicator";
 import { MIN_CONFIDENCE, RISK_BANDS } from "./config";
 import { evaluateGuardrails, worstGuardrailVerdict } from "./guardrails";
+import { checkScope, scopeBlockResult } from "./scope";
 import type {
   AgentAction,
+  AgentIdentity,
   CaughtBy,
   GuardrailThresholds,
   JudgeResult,
@@ -39,8 +41,15 @@ export async function judge(
   action: AgentAction,
   policyRules: PolicyRule[],
   thresholds?: Partial<GuardrailThresholds>,
+  agent?: AgentIdentity,
 ): Promise<JudgeResult> {
   const start = Date.now();
+
+  // ── LAYER 0: capability scope (only when an acting agent is provided) ─────
+  if (agent) {
+    const scope = checkScope(agent, action);
+    if (!scope.allowed) return scopeBlockResult(action, agent, scope, start);
+  }
 
   // ── LAYER 1: deterministic guardrails (always run, in code, first) ────────
   const guardrailHits = evaluateGuardrails(action, thresholds);

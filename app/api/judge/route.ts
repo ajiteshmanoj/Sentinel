@@ -23,7 +23,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await judge(body.action, body.policyRules, body.thresholds);
+    const result = await judge(
+      body.action,
+      body.policyRules,
+      body.thresholds,
+      body.agent,
+    );
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
     // Last-resort guard: even a malformed request must not crash the demo.

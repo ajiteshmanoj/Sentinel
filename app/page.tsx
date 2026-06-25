@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { GuidedDemo } from "@/components/GuidedDemo";
 import { Hero } from "@/components/Hero";
 import { HowItWorks } from "@/components/HowItWorks";
+import { Integrate } from "@/components/Integrate";
 import { Navbar } from "@/components/Navbar";
 import { Positioning } from "@/components/Positioning";
 import { PossibilitiesExplorer } from "@/components/PossibilitiesExplorer";
@@ -21,6 +22,7 @@ export default function Home() {
       <Console />
       <HowItWorks />
       <Architecture />
+      <Integrate />
       <Positioning />
       <PossibilitiesExplorer />
       <Footer />

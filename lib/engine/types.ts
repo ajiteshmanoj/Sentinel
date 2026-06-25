@@ -153,4 +153,6 @@ export interface JudgeRequestBody {
   policyRules: PolicyRule[];
   /** Optional live overrides for the deterministic guardrail thresholds. */
   thresholds?: Partial<GuardrailThresholds>;
+  /** Optional acting agent — enables the server-side Layer-0 scope check. */
+  agent?: AgentIdentity;
 }

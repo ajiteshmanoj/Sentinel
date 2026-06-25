@@ -1,0 +1,35 @@
+{
+  "name": "@sentinel/guard",
+  "version": "0.1.0",
+  "description": "Drop-in control layer for AI agents that take real-world action. Wrap any tool call; risky actions are blocked or escalated to a human.",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "guardrails",
+    "permissions",
+    "authorization",
+    "human-in-the-loop",
+    "openai",
+    "agent-safety"
+  ],
+  "license": "MIT",
+  "engines": { "node": ">=18" },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
