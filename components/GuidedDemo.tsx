@@ -36,7 +36,7 @@ const STEPS: Step[] = [
   { kind: "run" },
   {
     kind: "caption",
-    text: "See that? A $25,000 wire just executed — irreversible, gone. And a $9,800 fraud sailed straight through, because nothing even flagged it.",
+    text: "See that? A $25,000 wire executed — gone. A $9,800 fraud sailed straight through. And an Ops agent wiped the production database. No one even flagged it.",
     ms: 6200,
   },
   { kind: "sentinel", on: true },
@@ -50,6 +50,11 @@ const STEPS: Step[] = [
     kind: "caption",
     text: "The $25,000 wire hit a hard rule, so I froze it. But the $9,800 passed every rule — I caught that one myself. That's what a rulebook can't do.",
     ms: 6800,
+  },
+  {
+    kind: "caption",
+    text: "And it isn't only money — that last one was an Ops agent trying to delete the production database. Blocked on sight. Same engine, any agent, any action.",
+    ms: 6400,
   },
   // Revocation beat — each agent has only the permissions it needs, and I can cut one off instantly.
   { kind: "scroll", to: "agents" },
@@ -76,10 +81,25 @@ const STEPS: Step[] = [
     text: "And every decision — approved, frozen, or revoked — is logged: tamper-evident, hash-chained, exportable. Audit-ready for a regulator.",
     ms: 5600,
   },
+  // Under the hood — the system that produced every one of those verdicts.
+  { kind: "scroll", to: "architecture" },
   {
     kind: "caption",
-    text: "That's me. Sentinel — the control layer for AI agents that move money.",
-    ms: 4400,
+    text: "Every one of those calls ran the same path under the hood — capability scope, then deterministic rules, then the model — with a fail-safe at every edge.",
+    ms: 6400,
+  },
+  // Integration — Sentinel is a layer you deploy, not a closed demo.
+  { kind: "scroll", to: "integrate" },
+  {
+    kind: "caption",
+    text: "And I'm not a closed demo. Wrap any agent's tool call in three lines, and everything it does runs through me.",
+    ms: 5800,
+  },
+  { kind: "scroll", to: "top" },
+  {
+    kind: "caption",
+    text: "That's me. Sentinel — the control layer for AI agents that move money, and everything beyond.",
+    ms: 4600,
   },
 ];
 

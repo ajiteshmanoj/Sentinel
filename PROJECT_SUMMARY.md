@@ -110,20 +110,26 @@ Apple-grade, calm/premium fintech aesthetic. Dark theme, deep indigo/violet acce
    risk gauge + count-up, "Caught by" label, risk-factor tags, highlighted policy
    violations, plain-English reasoning, suggested human action, and **Approve / Edit /
    Block**). Live stats strip, editable policy rules (edit → re-run → verdict changes),
-   run/pause/reset, and a speed control.
-3. **Agent Permissions** — the Auth0-style least-privilege layer made visible: each agent
-   and its bounded grant, with a **live revoke** beat that instantly denies a revoked
-   agent's actions (Layer 0 in action).
-4. **Audit Trail** — a tamper-evident decision log; every verdict is chained so the record
-   can be shown to be unaltered.
-5. **How It Works** — 3-step animated diagram (Agent acts → Sentinel judges → Human owns
+   run/pause/reset, and a speed control. The Console also surfaces two trust artifacts:
+   an **Agent Permissions** panel — the Auth0-style least-privilege grants made visible,
+   with a **live revoke** beat that instantly denies a revoked agent's actions (Layer 0 in
+   action) — and a tamper-evident **Audit Trail** where every verdict is chained so the
+   record can be shown to be unaltered.
+3. **How It Works** — 3-step animated diagram (Agent acts → Sentinel judges → Human owns
    the risky call) plus a hybrid-engine explainer.
-6. **Possibilities Explorer** — an interactive "the possibilities are endless" panel showing
-   the same engine governing **cross-domain** agents/actions (beyond finance — ops, IT,
-   data), to make the horizontality legible.
-7. **Positioning** — animated wedge rings (Beachhead → Expand → Platform), four
+4. **Architecture ("Under the hood")** — exposes the full system: how a single action
+   travels through Layer 0 → Layer 1 → Layer 2 to a verdict, for the technical judge.
+5. **Integrate ("Drop-in control. Three lines.")** — frames Sentinel not as a closed demo
+   but as a layer you wrap around an agent's tool calls. Shows a `@sentinel/guard` SDK
+   snippet (`sentinel.protect(tool, describe)`) that governs any tool call — money, infra,
+   identity, data — returning an allow/review/block verdict, fail-safe, with capability
+   scope + human-in-the-loop built in.
+6. **Positioning** — animated wedge rings (Beachhead → Expand → Platform), four
    "why fintech first" cards, the build-vs-buy line, and defensibility chips.
    **No market-size chart**, by design.
+7. **Possibilities Explorer** — an interactive "the possibilities are endless" panel showing
+   the same engine governing **cross-domain** agents/actions (beyond finance — ops, IT,
+   data), to make the horizontality legible.
 
 There is also a self-running **Guided Demo** mode driven by a credible AI-presenter persona
 (floating, narrated walkthrough that auto-scrolls the judged card into view and hits the
@@ -183,8 +189,10 @@ lib/
 components/
   Hero, AmbientBackground, GlyphField, Logo, brand, Navbar, BuiltWith, Reveal,
   Console, ActionCard, ReviewPanel, RiskGauge, StatsStrip, PolicyPanel,
-  AgentsPanel, AuditTrail, GuidedDemo, PossibilitiesExplorer, HowItWorks,
-  Positioning, SetupNotice, Footer, icons
+  AgentsPanel, AuditTrail, GuidedDemo, HowItWorks, Architecture, Integrate,
+  Positioning, PossibilitiesExplorer, SetupNotice, Footer, icons
+submission/
+  DEVPOST.md, VIDEO_SCRIPT.md, PITCH_DECK.md, Sentinel-Pitch-Deck.pdf  # 10-slide, 1280x720
 ```
 
 ---
@@ -207,6 +215,11 @@ components/
    proving the same engine works beyond finance.
 10. Chrome/polish: floating shrinking navbar, "Built with" logo marquee, animated glyph
     background.
+11. Added an **"Under the hood" Architecture section** exposing the Layer 0 → 1 → 2 flow,
+    and an **Integrate section** with a `@sentinel/guard` drop-in SDK (`sentinel.protect`)
+    — reframing Sentinel as a layer you wrap around any agent's tool calls.
+12. Authored the **10-slide pitch deck PDF** (`submission/Sentinel-Pitch-Deck.pdf`, 1280×720)
+    following TheFirst Spark prep guide.
 
 ## Known follow-ups
 

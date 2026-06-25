@@ -40,8 +40,8 @@ export type ItemStatus =
 export type HumanDecision = "approved" | "edited" | "blocked" | null;
 export type ScenarioMode = "full" | "guided";
 
-/** The curated arc, in order: routine allow → rule-block → AI-catch. */
-const GUIDED_IDS = ["act-01", "act-03", "act-ai"];
+/** The curated arc: routine allow → rule-block → AI-catch → cross-domain catch. */
+const GUIDED_IDS = ["act-01", "act-03", "act-ai", "act-14"];
 
 /** What happens to an action when Sentinel is OFF. */
 export interface OffOutcome {
