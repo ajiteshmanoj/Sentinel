@@ -6,7 +6,7 @@ import { Logo } from "./Logo";
 
 const LINKS = [
   { href: "#console", label: "Live console" },
-  { href: "#how", label: "How it works" },
+  { href: "#architecture", label: "Architecture" },
   { href: "#positioning", label: "Why fintech first" },
 ];
 

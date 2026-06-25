@@ -1,4 +1,5 @@
 import { BuiltWith } from "@/components/BuiltWith";
+import { Architecture } from "@/components/Architecture";
 import { Console } from "@/components/Console";
 import { Footer } from "@/components/Footer";
 import { GuidedDemo } from "@/components/GuidedDemo";
@@ -19,6 +20,7 @@ export default function Home() {
       <BuiltWith />
       <Console />
       <HowItWorks />
+      <Architecture />
       <Positioning />
       <PossibilitiesExplorer />
       <Footer />
