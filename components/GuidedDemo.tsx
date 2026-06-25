@@ -109,6 +109,42 @@ function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+// ── Voice (ElevenLabs via /api/speak) ────────────────────────────────────────
+// Module-level cache keyed by line text, so re-running the demo in the same
+// session reuses the audio (zero extra TTS characters spent).
+const audioCache = new Map<string, Promise<HTMLAudioElement | null>>();
+
+function fetchLine(text: string): Promise<HTMLAudioElement | null> {
+  return fetch("/api/speak", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  })
+    .then((r) => {
+      if (!r.ok) throw new Error(`speak ${r.status}`);
+      return r.blob();
+    })
+    .then((b) => {
+      const a = new Audio(URL.createObjectURL(b));
+      a.preload = "auto";
+      return a;
+    })
+    .catch(() => null);
+}
+
+function getLine(text: string): Promise<HTMLAudioElement | null> {
+  let p = audioCache.get(text);
+  if (!p) {
+    p = fetchLine(text);
+    audioCache.set(text, p);
+  }
+  return p;
+}
+
+const ALL_CAPTIONS = STEPS.filter(
+  (s): s is Extract<Step, { kind: "caption" }> => s.kind === "caption",
+).map((s) => s.text);
+
 function useTypewriter(text: string, speed = 16) {
   const reduce = useReducedMotion();
   const [shown, setShown] = useState("");
@@ -174,10 +210,18 @@ export function GuidedDemo() {
 
   const [caption, setCaption] = useState("");
   const [captionIndex, setCaptionIndex] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const [audioPlaying, setAudioPlaying] = useState(false);
   const tokenRef = useRef(0);
+  const mutedRef = useRef(false);
+  const currentAudio = useRef<HTMLAudioElement | null>(null);
 
   const typed = useTypewriter(caption);
-  const speaking = typed.length < caption.length;
+  const speaking = audioPlaying || typed.length < caption.length;
+
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
 
   useEffect(() => {
     if (!active) return;
@@ -185,7 +229,35 @@ export function GuidedDemo() {
     const cancelled = () => tokenRef.current !== myToken;
     const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+    // Pre-warm every line in parallel so playback is gap-free.
+    ALL_CAPTIONS.forEach((t) => void getLine(t));
+
+    // Speak a line; resolves when the audio ends (or is interrupted). Returns
+    // false if muted or audio is unavailable, so the caller falls back to text.
+    const speak = async (text: string): Promise<boolean> => {
+      if (mutedRef.current) return false;
+      const audio = await getLine(text);
+      if (!audio || cancelled()) return false;
+      currentAudio.current = audio;
+      try {
+        audio.currentTime = 0;
+        await audio.play();
+      } catch {
+        setAudioPlaying(false);
+        return false;
+      }
+      setAudioPlaying(true);
+      await new Promise<void>((res) => {
+        const done = () => res();
+        audio.addEventListener("ended", done, { once: true });
+        audio.addEventListener("pause", done, { once: true });
+      });
+      setAudioPlaying(false);
+      return true;
+    };
+
     const finish = () => {
+      currentAudio.current?.pause();
       const api = useConsole.getState();
       api.setSpeed(1100);
       api.resetAgents();
@@ -226,7 +298,12 @@ export function GuidedDemo() {
           case "caption":
             setCaption(step.text);
             setCaptionIndex(++capCount);
-            await wait(step.ms);
+            // Speak it; if voice is off/unavailable, hold for the written time.
+            {
+              const spoke = await speak(step.text);
+              if (!spoke && !cancelled()) await wait(step.ms);
+              else if (spoke && !cancelled()) await wait(500); // brief beat after speech
+            }
             break;
         }
       }
@@ -235,18 +312,29 @@ export function GuidedDemo() {
 
     return () => {
       tokenRef.current++;
+      currentAudio.current?.pause();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
   const stop = () => {
     tokenRef.current++;
+    currentAudio.current?.pause();
     const api = useConsole.getState();
     api.setSpeed(1100);
     api.pause();
     api.resetAgents();
     api.setMode("full");
     setActive(false);
+  };
+
+  const toggleMute = () => {
+    setMuted((m) => {
+      const next = !m;
+      mutedRef.current = next;
+      if (next) currentAudio.current?.pause();
+      return next;
+    });
   };
 
   return (
@@ -299,12 +387,32 @@ export function GuidedDemo() {
                       {speaking ? "speaking" : "AI guide"}
                     </span>
                   </span>
-                  <button
-                    onClick={stop}
-                    className="shrink-0 rounded-md px-1.5 py-1 text-xs text-white/40 transition-colors hover:bg-white/5 hover:text-white"
-                  >
-                    Skip ✕
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={toggleMute}
+                      aria-label={muted ? "Unmute voice" : "Mute voice"}
+                      title={muted ? "Unmute" : "Mute"}
+                      className="grid h-7 w-7 place-items-center rounded-md text-white/45 transition-colors hover:bg-white/5 hover:text-white"
+                    >
+                      {muted ? (
+                        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+                          <path d="M4 9v6h4l5 4V5L8 9H4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                          <path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+                          <path d="M4 9v6h4l5 4V5L8 9H4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                          <path d="M16.5 8.5a5 5 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                        </svg>
+                      )}
+                    </button>
+                    <button
+                      onClick={stop}
+                      className="rounded-md px-1.5 py-1 text-xs text-white/40 transition-colors hover:bg-white/5 hover:text-white"
+                    >
+                      Skip ✕
+                    </button>
+                  </div>
                 </div>
 
                 <p className="text-[0.98rem] font-medium leading-relaxed text-white/90">

@@ -10,6 +10,16 @@ export const JUDGE_MODEL = process.env.SENTINEL_JUDGE_MODEL ?? "gpt-5.4";
 export const SUMMARY_MODEL =
   process.env.SENTINEL_SUMMARY_MODEL ?? "gpt-5.4-mini";
 
+/**
+ * Text-to-speech for the guided demo's voice (the presenter actually speaks),
+ * powered by ElevenLabs. The key is read server-side only.
+ */
+export const ELEVENLABS_MODEL =
+  process.env.ELEVENLABS_MODEL_ID ?? "eleven_turbo_v2_5";
+/** Default voice: "Rachel" — calm, clear narrator. Override with ELEVENLABS_VOICE_ID. */
+export const ELEVENLABS_VOICE =
+  process.env.ELEVENLABS_VOICE_ID ?? "21m00Tcm4TlvDq8ikWAM";
+
 /** Reasoning effort for the judge. Spec: "high". */
 export const JUDGE_REASONING_EFFORT: "low" | "medium" | "high" = "high";
 
